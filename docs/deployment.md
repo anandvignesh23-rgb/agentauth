@@ -2,11 +2,11 @@
 
 Deployment provider: Vercel Serverless Functions
 
-Public backend URL: pending Vercel deployment
+Public backend URL: https://agentauth.vercel.app
 
-Health URL: pending Vercel deployment
+Health URL: https://agentauth.vercel.app/api/health
 
-Actual Vercel URL: pending
+Actual Vercel URL: https://agentauth.vercel.app
 
 Swagger/OpenAPI URL: `/docs` and `/openapi.json` are available in the Node backend. They are lightweight API docs, not FastAPI Swagger UI.
 
@@ -55,15 +55,15 @@ RAZORPAY_WEBHOOK_SECRET=
 After deployment:
 
 ```bash
-python3 scripts/smoke_test_public_backend.py --base-url https://actual-vercel-url --run-demo-flow
+python3 scripts/smoke_test_public_backend.py --base-url https://agentauth.vercel.app --run-demo-flow
 ```
 
 Also verify manually:
 
 ```bash
-curl https://actual-vercel-url/api/health
-curl https://actual-vercel-url/v1/agents
-curl https://actual-vercel-url/openapi.json
+curl https://agentauth.vercel.app/api/health
+curl https://agentauth.vercel.app/v1/agents
+curl https://agentauth.vercel.app/openapi.json
 ```
 
 Known limitations:

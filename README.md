@@ -72,9 +72,9 @@ http://127.0.0.1:8787/security-lab
 
 ## Live Backend
 
-Public backend URL: pending Vercel deployment.
+Public backend URL: https://agentauth.vercel.app
 
-Health URL: available locally at `http://127.0.0.1:8787/health`; after Vercel deployment use `https://your-vercel-url/api/health` or the compatibility rewrite at `https://your-vercel-url/health`.
+Health URL: https://agentauth.vercel.app/api/health, with compatibility rewrite at `https://agentauth.vercel.app/health`.
 
 Razorpay integration: not configured for this deployment milestone.
 
@@ -91,7 +91,7 @@ Deployment docs:
 Public smoke test:
 
 ```bash
-python3 scripts/smoke_test_public_backend.py --base-url https://actual-backend-url --run-demo-flow
+python3 scripts/smoke_test_public_backend.py --base-url https://agentauth.vercel.app --run-demo-flow
 ```
 
 ## Demo Credentials

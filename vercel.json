@@ -20,11 +20,11 @@
     },
     {
       "source": "/v1/(.*)",
-      "destination": "/api/v1/$1"
+      "destination": "/api"
     },
     {
       "source": "/webhooks/(.*)",
-      "destination": "/api/webhooks/$1"
+      "destination": "/api"
     }
   ],
   "headers": [

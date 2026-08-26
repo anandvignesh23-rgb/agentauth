@@ -9,7 +9,7 @@
 | Authentication | PARTIAL | Token signing exists; full login/RBAC is not implemented. |
 | Ed25519 verification | REAL | Covered by tests and demo flow. |
 | Delegation checks | REAL | Agent/merchant/order/amount/currency/expiry/revocation enforced. |
-| Replay protection | REAL | Nonce registry blocks replay. |
+| Replay protection | REAL | PostgreSQL mode reserves nonces with `unique(agent_id, nonce)`. |
 | Fraud detection | REAL | Deterministic transaction fraud scoring. |
 | Agent-aware risk | REAL | Deterministic behavior scoring and profiles. |
 | Step-up | REAL | Step-up challenge approval flow works. |
@@ -18,9 +18,9 @@
 | CORS | REAL | Restrictive env-driven origin, no wildcard production default. |
 | Secret safety | REAL | `.env`, `.env.*`, data keys, and JSON store are ignored. |
 | Razorpay Test API | NOT CONFIGURED | Explicitly on hold for this task. |
-| PostgreSQL | NOT ADDED | Explicitly not added in this task. |
+| PostgreSQL | SCHEMA APPLIED | Supabase project `qusdfmrpujmvsqeqxwom`; Vercel still needs `DATABASE_URL` secret for cutover. |
 | Public smoke test script | REAL | `scripts/smoke_test_public_backend.py`. |
-| Clean deploy config | READY | `vercel.json`, `api/[...path].js`, reusable app handler. |
+| Clean deploy config | READY | `vercel.json`, `api/[...path].js`, reusable app handler, Supabase migration. |
 
 ## Deployment Attempt
 

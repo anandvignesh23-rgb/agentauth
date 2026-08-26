@@ -8,7 +8,7 @@ import { paymentConfig, getPaymentProvider } from "./payments/provider.js";
 import { reconcilePaymentExecution } from "./payments/reconciliation.js";
 import { buildRiskProfiles } from "./risk/features.js";
 import { seedDemo } from "./seed.js";
-import { Store } from "./store.js";
+import { createAppStore } from "./store.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
@@ -16,7 +16,7 @@ const environment = process.env.ENVIRONMENT || process.env.NODE_ENV || "developm
 const isProduction = environment === "production";
 const isVercel = Boolean(process.env.VERCEL);
 const dataDir = process.env.DATA_DIR || (isVercel ? "/tmp/agentauth" : path.join(root, "data"));
-const store = new Store(path.join(dataDir, "agentauth.json"));
+process.env.DATA_DIR ||= dataDir;
 const tokenSecret = process.env.JWT_SECRET || process.env.AGENTAUTH_TOKEN_SECRET || (isProduction ? null : "dev-only-token-secret");
 if (!tokenSecret) {
   console.error("JWT_SECRET or AGENTAUTH_TOKEN_SECRET is required when ENVIRONMENT=production.");
@@ -77,16 +77,17 @@ function serveStatic(req, res) {
 
 export async function handleAgentAuthRequest(req, res) {
   try {
+    const store = await createAppStore({ file: path.join(dataDir, "agentauth.json") });
     if (req.method === "OPTIONS") return json(res, 200, {});
     const url = new URL(req.url, `http://${req.headers.host}`);
     const p = url.pathname === "/api" ? "/" : url.pathname.replace(/^\/api(?=\/|$)/, "") || "/";
     if (req.method === "GET" && serveStatic(req, res)) return;
     if (req.method === "GET" && p === "/health") return json(res, 200, {
       status: "ok",
-      ...(isVercel ? { runtime: "vercel", persistence: "temporary" } : {}),
+      ...(isVercel ? { runtime: "vercel", persistence: store.kind === "postgres" ? "supabase_postgres" : "temporary" } : {}),
       environment,
-      database: "demo_store",
-      data_dir: dataDir,
+      database: store.kind === "postgres" ? "supabase_postgres" : "demo_store",
+      ...(store.kind === "json" ? { data_dir: dataDir } : {}),
       razorpay_configured: paymentConfig().razorpayConfigured,
       payment_provider: paymentConfig().provider,
       payment_integration_available: paymentConfig().available
@@ -110,7 +111,7 @@ export async function handleAgentAuthRequest(req, res) {
       return;
     }
     if (req.method === "POST" && p === "/v1/dev/reset") {
-      seedDemo(store);
+      await seedDemo(store);
       return json(res, 200, { ok: true });
     }
     if (req.method === "POST" && p === "/v1/agents") {
@@ -128,6 +129,7 @@ export async function handleAgentAuthRequest(req, res) {
         created_at: new Date().toISOString(),
         revoked_at: null
       });
+      await store.save();
       return json(res, 201, { agent_id: agent.agent_id, status: agent.status, ...(keys && !isProduction ? { demo_private_key: keys.privateKeyPem } : {}) });
     }
     if (req.method === "GET" && p === "/v1/agents") return json(res, 200, store.all("agents").map(({ public_key, ...a }) => a));
@@ -150,7 +152,7 @@ export async function handleAgentAuthRequest(req, res) {
           delegation.revoked_at = agent.revoked_at;
         }
       }
-      store.save();
+      await store.save();
       return json(res, 200, { agent_id, status: "REVOKED", active_delegations_revoked: cascade });
     }
     if (req.method === "POST" && p.match(/^\/v1\/agents\/[^/]+\/rotate-key$/)) {
@@ -165,7 +167,7 @@ export async function handleAgentAuthRequest(req, res) {
       agent.last_key_rotation_at = agent.key_rotated_at;
       agent.key_rotation_count = (agent.key_rotation_count || 0) + 1;
       store.audit(null, "AGENT_KEY_ROTATED", "DEVELOPER", `Agent ${agent_id} public key rotated.`, { agent_id, old_fingerprint: oldFingerprint, new_fingerprint: agent.public_key_fingerprint });
-      store.save();
+      await store.save();
       return json(res, 200, { agent_id, public_key_fingerprint: agent.public_key_fingerprint, status: agent.status });
     }
     if (req.method === "GET" && p === "/v1/merchants") return json(res, 200, store.all("merchants"));
@@ -188,7 +190,7 @@ export async function handleAgentAuthRequest(req, res) {
         revoked_at: null
       });
       delegation.delegation_credential = signDelegationCredential(tokenSecret, delegation);
-      store.save();
+      await store.save();
       return json(res, 201, delegation);
     }
     if (req.method === "GET" && p === "/v1/delegations") return json(res, 200, store.all("delegations"));
@@ -198,12 +200,12 @@ export async function handleAgentAuthRequest(req, res) {
       if (!d) return json(res, 404, { error: "DELEGATION_NOT_FOUND" });
       d.status = "REVOKED";
       d.revoked_at = new Date().toISOString();
-      store.save();
+      await store.save();
       return json(res, 200, { delegation_id, status: "REVOKED" });
     }
     if (req.method === "POST" && p === "/v1/authorize-payment") {
       const payload = await body(req);
-      return json(res, 200, authorizePayment({ store, tokenSecret, payload, signature: req.headers["x-agent-signature"], headerAgentId: req.headers["x-agent-id"] }));
+      return json(res, 200, await authorizePayment({ store, tokenSecret, payload, signature: req.headers["x-agent-signature"], headerAgentId: req.headers["x-agent-id"] }));
     }
     if (req.method === "GET" && p.match(/^\/v1\/authorization-requests\/[^/]+\/audit\/export$/)) {
       const request_id = p.split("/")[3];
@@ -232,12 +234,12 @@ export async function handleAgentAuthRequest(req, res) {
     }
     if (req.method === "POST" && p.match(/^\/v1\/authorization-requests\/[^/]+\/(approve|deny)$/)) {
       const parts = p.split("/");
-      const result = approveStepUp({ store, tokenSecret, request_id: parts[3], approved: parts[4] === "approve" });
+      const result = await approveStepUp({ store, tokenSecret, request_id: parts[3], approved: parts[4] === "approve" });
       return result ? json(res, 200, result) : json(res, 404, { error: "STEP_UP_REQUEST_NOT_FOUND" });
     }
     if (req.method === "POST" && p === "/v1/verify-payment-token") {
       const data = await body(req);
-      return json(res, 200, verifyPaymentToken({ store, tokenSecret, token: data.token, expected: data }));
+      return json(res, 200, await verifyPaymentToken({ store, tokenSecret, token: data.token, expected: data }));
     }
     if (req.method === "POST" && p.match(/^\/v1\/payment-tokens\/[^/]+\/revoke$/)) {
       const token_id = p.split("/")[3];
@@ -245,7 +247,7 @@ export async function handleAgentAuthRequest(req, res) {
       if (!t) return json(res, 404, { error: "TOKEN_NOT_FOUND" });
       t.revoked_at = new Date().toISOString();
       t.status = "REVOKED";
-      store.save();
+      await store.save();
       return json(res, 200, { token_id, status: "REVOKED" });
     }
     if (req.method === "POST" && p === "/v1/payments/create-order") {
@@ -267,7 +269,7 @@ export async function handleAgentAuthRequest(req, res) {
         execution.client_signature_verified_at = new Date().toISOString();
         execution.status = "AUTHORIZED";
         store.audit(execution.authorization_request_id, "RAZORPAY_CALLBACK_VERIFIED", "RAZORPAY", "Razorpay checkout callback signature verified.", { razorpay_payment_id: data.razorpay_payment_id });
-        store.save();
+        await store.save();
       }
       return json(res, ok ? 200 : 400, { valid: ok, execution_id: execution?.execution_id });
     }
@@ -316,12 +318,12 @@ export async function handleAgentAuthRequest(req, res) {
       }
       event.status = "PROCESSED";
       event.processed_at = new Date().toISOString();
-      store.save();
+      await store.save();
       return json(res, 200, { ok: true, event_id: event.id });
     }
     if (req.method === "POST" && p === "/v1/security-lab/run") {
       const data = await body(req);
-      seedDemo(store);
+      await seedDemo(store);
       let privateKey = fs.readFileSync(path.join(dataDir, "demo-agent-private.pem"), "utf8");
       const base = {
         agent_id: "agent_7F92A",
@@ -368,7 +370,7 @@ export async function handleAgentAuthRequest(req, res) {
         const results = [];
         for (let i = 0; i < 5; i++) {
           const bad = { ...base, nonce: id("nonce"), amount: 49999 };
-          results.push(authorizePayment({ store, tokenSecret, payload: bad, signature: signPayload(privateKey, bad), headerAgentId: bad.agent_id }));
+          results.push(await authorizePayment({ store, tokenSecret, payload: bad, signature: signPayload(privateKey, bad), headerAgentId: bad.agent_id }));
         }
         return json(res, 200, { results, profile: store.find("agentRiskProfiles", (profile) => profile.agent_id === "agent_7F92A") });
       }
@@ -382,7 +384,7 @@ export async function handleAgentAuthRequest(req, res) {
           const shouldAuthorize = data.scenario !== "compromised_burst" || i % 3 !== 0;
           const delegation = shouldAuthorize ? createScenarioDelegation({ merchant_id, order_id, amount }) : null;
           const burst = { ...base, delegation_id: delegation?.delegation_id || base.delegation_id, order_id, nonce: id("nonce"), merchant_id, amount };
-          results.push(authorizePayment({ store, tokenSecret, payload: burst, signature: signPayload(privateKey, burst), headerAgentId: burst.agent_id }));
+          results.push(await authorizePayment({ store, tokenSecret, payload: burst, signature: signPayload(privateKey, burst), headerAgentId: burst.agent_id }));
         }
         return json(res, 200, { results, profile: store.find("agentRiskProfiles", (profile) => profile.agent_id === "agent_7F92A") });
       }
@@ -399,9 +401,9 @@ export async function handleAgentAuthRequest(req, res) {
         signed = sent = { ...base, delegation_id: "del_highrisk", merchant_id: "merchant_new_luxury", order_id: "ORD-40000", amount: 40000 };
       }
       const signature = data.scenario === "invalid_signature" ? "invalid" : signPayload(privateKey, signed);
-      const first = authorizePayment({ store, tokenSecret, payload: sent, signature, headerAgentId: sent.agent_id });
+      const first = await authorizePayment({ store, tokenSecret, payload: sent, signature, headerAgentId: sent.agent_id });
       if (data.scenario === "replay") {
-        const second = authorizePayment({ store, tokenSecret, payload: sent, signature, headerAgentId: sent.agent_id });
+        const second = await authorizePayment({ store, tokenSecret, payload: sent, signature, headerAgentId: sent.agent_id });
         return json(res, 200, { canonical: canonicalize(signed), first, second });
       }
       return json(res, 200, { canonical: canonicalize(signed), result: first });

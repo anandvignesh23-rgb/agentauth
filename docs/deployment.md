@@ -25,14 +25,13 @@ Required environment variables:
 ```env
 ENVIRONMENT=production
 NODE_ENV=production
-HOST=0.0.0.0
-PORT=<platform-provided>
 JWT_SECRET=<secure-random-value>
-AGENTAUTH_TOKEN_SECRET=<secure-random-value>
-DATA_DIR=/tmp/agentauth
+DATABASE_URL=<supabase-pooled-postgres-url>
 FRONTEND_URL=<frontend origin when available>
 PAYMENT_PROVIDER=razorpay
 ```
+
+`AGENTAUTH_TOKEN_SECRET` remains supported as a backwards-compatible alias for `JWT_SECRET`. `DATA_DIR` is used only for explicit JSON demo mode.
 
 Razorpay variables are optional for this deployment milestone:
 
@@ -47,7 +46,7 @@ RAZORPAY_WEBHOOK_SECRET=
 1. Push the AgentAuth project to GitHub.
 2. Import `anandvignesh23-rgb/agentauth` in Vercel or deploy with the Vercel CLI.
 3. Use the included `vercel.json`.
-4. Set `ENVIRONMENT=production`, `NODE_ENV=production`, `JWT_SECRET`, `DATA_DIR=/tmp/agentauth`, and `PAYMENT_PROVIDER=razorpay`.
+4. Set `ENVIRONMENT=production`, `NODE_ENV=production`, `JWT_SECRET`, `DATABASE_URL`, and `PAYMENT_PROVIDER=razorpay`.
 5. Deploy.
 
 ## Verification
@@ -69,5 +68,5 @@ curl https://agentauth.vercel.app/openapi.json
 Known limitations:
 
 - Razorpay integration is not configured in this milestone.
-- PostgreSQL is not implemented in this milestone.
-- JSON demo persistence is temporary on Vercel and is not production-grade.
+- PostgreSQL/Supabase schema is implemented; Vercel requires the Supabase pooled `DATABASE_URL` for durable production mode.
+- JSON demo persistence is local/demo only and is not production-grade.

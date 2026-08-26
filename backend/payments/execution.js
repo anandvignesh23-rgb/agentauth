@@ -54,8 +54,8 @@ export async function createPaymentExecution({ store, tokenSecret, token, expect
   const existing = store.find("paymentExecutions", (p) => p.token_id === tokenRecord.token_id);
   if (existing) return { ok: true, idempotent: true, execution: existing };
 
-  tokenRecord.status = "RESERVED";
-  tokenRecord.reserved_at = new Date().toISOString();
+  const reserved = await store.reservePaymentToken(tokenRecord.token_id);
+  if (!reserved) return { ok: false, valid: false, reason_codes: ["TOKEN_ALREADY_RESERVED"] };
   const execution = store.insert("paymentExecutions", {
     id: store.all("paymentExecutions").length + 1,
     execution_id: id("pex"),
@@ -84,8 +84,7 @@ export async function createPaymentExecution({ store, tokenSecret, token, expect
     execution.razorpay_order_id = providerOrder.id;
     execution.provider_order = providerOrder;
     execution.status = "CHECKOUT_OPENED";
-    tokenRecord.status = "CONSUMED";
-    tokenRecord.consumed_at = new Date().toISOString();
+    await store.consumePaymentToken(tokenRecord.token_id);
     store.insert("razorpayOrders", {
       razorpay_order_id: providerOrder.id,
       amount: tokenRecord.amount,
@@ -113,8 +112,7 @@ export async function createPaymentExecution({ store, tokenSecret, token, expect
     execution.status = "FAILED";
     execution.failed_at = new Date().toISOString();
     execution.error = err.message;
-    tokenRecord.status = "ACTIVE";
-    tokenRecord.reserved_at = null;
+    tokenRecord.status = "RESERVED";
     store.audit(tokenRecord.request_id, "PAYMENT_ORDER_FAILED", "RAZORPAY", "Razorpay order creation failed.", { error: err.message });
     store.save();
     return { ok: false, error: err.message, status: err.status || 500 };

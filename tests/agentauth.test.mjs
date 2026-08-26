@@ -54,10 +54,10 @@ function auth(ctx, p, sig = signPayload(ctx.privateKeyPem, p)) {
 test("allows a valid transaction and starts one exactly-once payment execution", async () => {
   process.env.PAYMENT_PROVIDER = "mock";
   const ctx = fixture();
-  const result = auth(ctx, payload());
+  const result = await auth(ctx, payload());
   assert.equal(result.decision, "ALLOW");
   assert.ok(result.payment_authorization.token);
-  const verified = verifyPaymentToken({
+  const verified = await verifyPaymentToken({
     store: ctx.store,
     tokenSecret: ctx.tokenSecret,
     token: result.payment_authorization.token,
@@ -82,48 +82,48 @@ test("allows a valid transaction and starts one exactly-once payment execution",
   assert.equal(replay.idempotent, true);
 });
 
-test("rejects tampered amount after signing", () => {
+test("rejects tampered amount after signing", async () => {
   const ctx = fixture();
   const original = payload();
   const sig = signPayload(ctx.privateKeyPem, original);
-  const result = auth(ctx, { ...original, amount: 9999 }, sig);
+  const result = await auth(ctx, { ...original, amount: 9999 }, sig);
   assert.equal(result.decision, "DENY");
   assert.deepEqual(result.reason_codes, ["INVALID_SIGNATURE"]);
 });
 
-test("rejects replayed nonce", () => {
+test("rejects replayed nonce", async () => {
   const ctx = fixture();
   const p = payload();
   const sig = signPayload(ctx.privateKeyPem, p);
-  assert.equal(auth(ctx, p, sig).decision, "ALLOW");
-  const replay = auth(ctx, p, sig);
+  assert.equal((await auth(ctx, p, sig)).decision, "ALLOW");
+  const replay = await auth(ctx, p, sig);
   assert.equal(replay.decision, "DENY");
   assert.deepEqual(replay.reason_codes, ["NONCE_REUSED"]);
 });
 
-test("rejects delegation scope violations", () => {
+test("rejects delegation scope violations", async () => {
   let ctx = fixture();
-  assert.deepEqual(auth(ctx, payload({ amount: 9999 })).reason_codes, ["AMOUNT_EXCEEDS_DELEGATION"]);
+  assert.deepEqual((await auth(ctx, payload({ amount: 9999 }))).reason_codes, ["AMOUNT_EXCEEDS_DELEGATION"]);
   ctx = fixture();
-  assert.deepEqual(auth(ctx, payload({ merchant_id: "merchant_new_luxury" })).reason_codes, ["MERCHANT_MISMATCH"]);
+  assert.deepEqual((await auth(ctx, payload({ merchant_id: "merchant_new_luxury" }))).reason_codes, ["MERCHANT_MISMATCH"]);
   ctx = fixture();
-  assert.deepEqual(auth(ctx, payload({ order_id: "ORD-OTHER" })).reason_codes, ["ORDER_MISMATCH"]);
+  assert.deepEqual((await auth(ctx, payload({ order_id: "ORD-OTHER" }))).reason_codes, ["ORDER_MISMATCH"]);
   ctx = fixture();
-  assert.deepEqual(auth(ctx, payload({ currency: "USD" })).reason_codes, ["CURRENCY_MISMATCH"]);
+  assert.deepEqual((await auth(ctx, payload({ currency: "USD" }))).reason_codes, ["CURRENCY_MISMATCH"]);
 });
 
-test("rejects expired delegation", () => {
+test("rejects expired delegation", async () => {
   const ctx = fixture();
-  const result = auth(ctx, payload({ delegation_id: "del_expired", order_id: "ORD-OLD" }));
+  const result = await auth(ctx, payload({ delegation_id: "del_expired", order_id: "ORD-OLD" }));
   assert.equal(result.decision, "DENY");
   assert.deepEqual(result.reason_codes, ["DELEGATION_EXPIRED"]);
 });
 
-test("produces step-up for medium risk and approval issues token", () => {
+test("produces step-up for medium risk and approval issues token", async () => {
   const ctx = fixture();
-  const result = auth(ctx, payload({ delegation_id: "del_highrisk", merchant_id: "merchant_new_luxury", order_id: "ORD-40000", amount: 40000 }));
+  const result = await auth(ctx, payload({ delegation_id: "del_highrisk", merchant_id: "merchant_new_luxury", order_id: "ORD-40000", amount: 40000 }));
   assert.equal(result.decision, "STEP_UP");
-  const approved = approveStepUp({ store: ctx.store, tokenSecret: ctx.tokenSecret, request_id: result.request_id, approved: true });
+  const approved = await approveStepUp({ store: ctx.store, tokenSecret: ctx.tokenSecret, request_id: result.request_id, approved: true });
   assert.equal(approved.decision, "ALLOW");
   assert.ok(approved.payment_authorization.token);
 });
@@ -163,21 +163,21 @@ test("published signature fixture validates and all tampered variants fail", () 
   }
 });
 
-test("100 simultaneous token consume requests produce one execution", async () => {
+test("100 simultaneous token consume requests reserve one token execution", async () => {
   process.env.PAYMENT_PROVIDER = "mock";
   const ctx = fixture();
-  const result = auth(ctx, payload());
+  const result = await auth(ctx, payload());
   const expected = { merchant_id: "merchant_demo_electronics", order_id: "ORD-1934", amount: 4999, currency: "INR" };
   const attempts = await Promise.all(Array.from({ length: 100 }, () => createPaymentExecution({ store: ctx.store, tokenSecret: ctx.tokenSecret, token: result.payment_authorization.token, expected })));
   assert.equal(ctx.store.all("paymentExecutions").length, 1);
-  assert.equal(attempts.filter((a) => a.ok).length, 100);
-  assert.equal(attempts.filter((a) => a.idempotent).length, 99);
+  assert.equal(attempts.filter((a) => a.ok && !a.idempotent).length, 1);
+  assert.equal(attempts.filter((a) => a.reason_codes?.includes("TOKEN_ALREADY_RESERVED") || a.reason_codes?.includes("TOKEN_ALREADY_USED")).length, 99);
 });
 
-test("revoked agent blocks future requests", () => {
+test("revoked agent blocks future requests", async () => {
   const ctx = fixture();
   ctx.store.all("agents")[0].status = "REVOKED";
-  const result = auth(ctx, payload());
+  const result = await auth(ctx, payload());
   assert.equal(result.decision, "DENY");
   assert.deepEqual(result.reason_codes, ["AGENT_REVOKED"]);
 });
@@ -248,17 +248,38 @@ test("combined risk policy separates transaction and agent risk", () => {
   assert.equal(highBoth.decision, "DENY");
 });
 
-test("risk snapshot is stored and policy violations lower reputation", () => {
+test("risk snapshot is stored and policy violations lower reputation", async () => {
   const ctx = fixture();
   const before = ctx.store.all("agents")[0].reputation_score;
-  const bad = auth(ctx, payload({ merchant_id: "merchant_new_luxury", nonce: "bad-nonce" }));
+  const bad = await auth(ctx, payload({ merchant_id: "merchant_new_luxury", nonce: "bad-nonce" }));
   assert.equal(bad.decision, "DENY");
   const after = ctx.store.all("agents")[0].reputation_score;
   assert.equal(after < before, true);
   assert.equal(ctx.store.find("agentRiskProfiles", (p) => p.agent_id === "agent_7F92A").delegation_violations >= 1, true);
 
   const clean = fixture();
-  const allowed = auth(clean, payload());
+  const allowed = await auth(clean, payload());
   assert.equal(clean.store.all("transactionRiskSnapshots").length, 1);
   assert.equal(allowed.risk.transaction_score < 0.45, true);
+});
+
+test("concurrent identical signed requests reserve a nonce once", async () => {
+  const ctx = fixture();
+  const p = payload({ nonce: "shared-nonce" });
+  const sig = signPayload(ctx.privateKeyPem, p);
+  const attempts = await Promise.all(Array.from({ length: 50 }, () => auth(ctx, p, sig)));
+  assert.equal(attempts.filter((r) => r.decision === "ALLOW").length, 1);
+  assert.equal(attempts.filter((r) => r.reason_codes?.includes("NONCE_REUSED")).length, 49);
+});
+
+test("two valid requests cannot consume the same single-use delegation", async () => {
+  const ctx = fixture();
+  const first = payload({ nonce: "first-delegation-use" });
+  const second = payload({ nonce: "second-delegation-use" });
+  const attempts = await Promise.all([
+    auth(ctx, first, signPayload(ctx.privateKeyPem, first)),
+    auth(ctx, second, signPayload(ctx.privateKeyPem, second))
+  ]);
+  assert.equal(attempts.filter((r) => r.decision === "ALLOW").length, 1);
+  assert.equal(attempts.filter((r) => r.reason_codes?.includes("DELEGATION_ALREADY_USED")).length, 1);
 });

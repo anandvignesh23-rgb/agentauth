@@ -7,7 +7,7 @@ import { maybeAutoSuspendAgent, updateAgentReputation } from "./risk/reputation.
 const CLOCK_WINDOW_MS = 2 * 60 * 1000;
 const POLICY_VERSION = "agentauth-policy-2026-08-24";
 
-function deny(store, request, reason_codes, risk_score = 0) {
+async function deny(store, request, reason_codes, risk_score = 0) {
   request.status = "DENIED";
   const decision = {
     id: id("dec"),
@@ -28,6 +28,7 @@ function deny(store, request, reason_codes, risk_score = 0) {
   maybeAutoSuspendAgent(store, request.agent_id);
   buildRiskProfiles(store);
   store.audit(request.request_id, "DECISION", "POLICY_ENGINE", "Decision: DENY", { reason_codes });
+  await store.save();
   console.log(JSON.stringify({
     event: "authorization_decision",
     request_id: request.request_id,
@@ -39,7 +40,7 @@ function deny(store, request, reason_codes, risk_score = 0) {
   return { decision: "DENY", request_id: request.request_id, risk_score, reason_codes, explanation: decision.explanation };
 }
 
-function issuePaymentToken(store, secret, request, delegation) {
+async function issuePaymentToken(store, secret, request, delegation) {
   const token_id = id("pat");
   const expires_at = new Date(Date.now() + 60_000).toISOString();
   const { token, claims } = signToken(secret, {
@@ -72,10 +73,11 @@ function issuePaymentToken(store, secret, request, delegation) {
     created_at: new Date().toISOString()
   });
   store.audit(request.request_id, "TOKEN_ISSUED", "AGENTAUTH", `Authorization token ${token_id} issued.`, { token_id });
+  await store.flush?.();
   return { token_id, token, expires_at };
 }
 
-export function authorizePayment({ store, tokenSecret, payload, signature, headerAgentId }) {
+export async function authorizePayment({ store, tokenSecret, payload, signature, headerAgentId }) {
   const request = {
     id: id("row"),
     request_id: id("req"),
@@ -110,8 +112,8 @@ export function authorizePayment({ store, tokenSecret, payload, signature, heade
   const timestamp = new Date(payload.timestamp).getTime();
   if (!Number.isFinite(timestamp) || Math.abs(Date.now() - timestamp) > CLOCK_WINDOW_MS) return deny(store, request, ["REQUEST_TOO_OLD"]);
 
-  if (store.find("nonces", (n) => n.agent_id === payload.agent_id && n.nonce === payload.nonce)) return deny(store, request, ["NONCE_REUSED"]);
-  store.insert("nonces", { nonce: payload.nonce, agent_id: payload.agent_id, used_at: new Date().toISOString(), request_id: request.request_id });
+  const nonceReserved = await store.reserveNonce(payload.agent_id, payload.nonce, request.request_id);
+  if (!nonceReserved) return deny(store, request, ["NONCE_REUSED"]);
   store.audit(request.request_id, "NONCE_ACCEPTED", "AGENTAUTH", "Nonce accepted.", { nonce: payload.nonce });
 
   const delegation = store.find("delegations", (d) => d.delegation_id === payload.delegation_id);
@@ -120,7 +122,7 @@ export function authorizePayment({ store, tokenSecret, payload, signature, heade
   if (delegation.status === "USED") return deny(store, request, ["DELEGATION_ALREADY_USED"]);
   if (new Date(delegation.expires_at).getTime() <= Date.now()) {
     delegation.status = "EXPIRED";
-    store.save();
+    await store.save();
     return deny(store, request, ["DELEGATION_EXPIRED"]);
   }
   const scopeFailures = [];
@@ -130,6 +132,7 @@ export function authorizePayment({ store, tokenSecret, payload, signature, heade
   if (delegation.currency !== payload.currency) scopeFailures.push("CURRENCY_MISMATCH");
   if (Number(payload.amount) > Number(delegation.max_amount)) scopeFailures.push("AMOUNT_EXCEEDS_DELEGATION");
   if (scopeFailures.length) return deny(store, request, scopeFailures);
+  request.user_id = delegation.user_id;
   store.audit(request.request_id, "DELEGATION_VALID", "AGENTAUTH", `Delegation ${delegation.delegation_id} validated.`, { reason_code: "DELEGATION_VALID" });
 
   const merchant = store.find("merchants", (m) => m.merchant_id === payload.merchant_id);
@@ -163,6 +166,16 @@ export function authorizePayment({ store, tokenSecret, payload, signature, heade
   request.status = decision === "ALLOW" ? "ALLOWED" : decision;
   if (decision === "STEP_UP") {
     request.step_up_expires_at = new Date(Date.now() + Number(process.env.STEP_UP_TTL_SECONDS || 300) * 1000).toISOString();
+    store.insert("stepUpChallenges", {
+      challenge_id: id("sup"),
+      request_id: request.request_id,
+      user_id: delegation.user_id,
+      status: "PENDING",
+      reason_codes,
+      created_at: new Date().toISOString(),
+      expires_at: request.step_up_expires_at,
+      resolved_at: null
+    });
   }
   const record = {
     id: id("dec"),
@@ -204,10 +217,10 @@ export function authorizePayment({ store, tokenSecret, payload, signature, heade
   }));
 
   if (decision === "ALLOW") {
-    delegation.status = "USED";
-    delegation.used_at = new Date().toISOString();
-    const payment_authorization = issuePaymentToken(store, tokenSecret, request, delegation);
-    store.save();
+    const consumed = await store.consumeDelegation(delegation.delegation_id);
+    if (!consumed) return deny(store, request, ["DELEGATION_ALREADY_USED"]);
+    const payment_authorization = await issuePaymentToken(store, tokenSecret, request, delegation);
+    await store.save();
     return {
       decision,
       request_id: request.request_id,
@@ -227,6 +240,7 @@ export function authorizePayment({ store, tokenSecret, payload, signature, heade
       payment_authorization
     };
   }
+  await store.save();
   return {
     decision,
     request_id: request.request_id,
@@ -246,20 +260,25 @@ export function authorizePayment({ store, tokenSecret, payload, signature, heade
   };
 }
 
-export function approveStepUp({ store, tokenSecret, request_id, approved }) {
+export async function approveStepUp({ store, tokenSecret, request_id, approved }) {
   const request = store.find("requests", (r) => r.request_id === request_id);
   if (!request || request.status !== "STEP_UP") return null;
   if (new Date(request.step_up_expires_at || 0).getTime() <= Date.now()) return deny(store, request, ["STEP_UP_EXPIRED"]);
   const delegation = store.find("delegations", (d) => d.delegation_id === request.delegation_id);
   const code = approved ? "USER_STEP_UP_APPROVED" : "USER_STEP_UP_DENIED";
+  const challenge = store.find("stepUpChallenges", (c) => c.request_id === request_id);
+  if (challenge) {
+    challenge.status = approved ? "APPROVED" : "DENIED";
+    challenge.resolved_at = new Date().toISOString();
+  }
   store.audit(request_id, "STEP_UP_DECISION", "USER", approved ? "User approved step-up challenge." : "User denied step-up challenge.", { reason_code: code });
   if (!approved) {
     return deny(store, request, [code]);
   }
   request.status = "ALLOWED";
-  delegation.status = "USED";
-  delegation.used_at = new Date().toISOString();
-  const payment_authorization = issuePaymentToken(store, tokenSecret, request, delegation);
+  const consumed = await store.consumeDelegation(delegation.delegation_id);
+  if (!consumed) return deny(store, request, ["DELEGATION_ALREADY_USED"]);
+  const payment_authorization = await issuePaymentToken(store, tokenSecret, request, delegation);
   const decision = {
     id: id("dec"),
     request_id,
@@ -273,11 +292,11 @@ export function approveStepUp({ store, tokenSecret, request_id, approved }) {
   };
   store.insert("decisions", decision);
   store.audit(request_id, "DECISION", "POLICY_ENGINE", "Decision: ALLOW after step-up.", { reason_codes: [code] });
-  store.save();
+  await store.save();
   return { decision: "ALLOW", request_id, reason_codes: [code], explanation: decision.explanation, payment_authorization };
 }
 
-export function verifyPaymentToken({ store, tokenSecret, token, expected }) {
+export async function verifyPaymentToken({ store, tokenSecret, token, expected }) {
   let claims;
   try {
     claims = verifyToken(tokenSecret, token);
@@ -294,7 +313,7 @@ export function verifyPaymentToken({ store, tokenSecret, token, expected }) {
     if (expected?.[field] !== undefined && String(expected[field]) !== String(claims[field])) return { valid: false, reason_codes: [code] };
   }
   store.audit(claims.request_id, "TOKEN_VERIFIED", "MERCHANT", "Merchant independently verified token.", { token_id: claims.jti });
-  store.save();
+  await store.save();
   return {
     valid: true,
     checks: [

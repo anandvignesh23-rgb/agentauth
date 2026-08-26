@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { generateEd25519KeyPair, fingerprint, signDelegationCredential } from "./crypto.js";
 import { Store } from "./store.js";
 
-export function seedDemo(store = new Store(path.join(process.env.DATA_DIR || "data", "agentauth.json"))) {
+export async function seedDemo(store = new Store(path.join(process.env.DATA_DIR || "data", "agentauth.json"))) {
   const dataDir = process.env.DATA_DIR || "data";
   const keys = generateEd25519KeyPair();
   fs.mkdirSync(dataDir, { recursive: true });
@@ -65,11 +65,12 @@ export function seedDemo(store = new Store(path.join(process.env.DATA_DIR || "da
     fraudSignalEvents: [],
     agentReputationEvents: []
   });
+  await store.save?.();
   return keys;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  seedDemo();
+  await seedDemo();
   console.log("Seeded AgentAuth demo data.");
   console.log(`Demo private key: ${process.env.DATA_DIR || "data"}/demo-agent-private.pem`);
 }

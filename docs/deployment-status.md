@@ -48,7 +48,7 @@ https://agentauth.vercel.app
 Latest deployment:
 
 ```text
-https://agentauth-602bl827e-anandvignesh23-rgbs-projects.vercel.app
+https://agentauth-dqz9hbpso-anandvignesh23-rgbs-projects.vercel.app
 ```
 
 ## Verification Completed Locally

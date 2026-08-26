@@ -329,8 +329,6 @@ export async function handleAgentAuthRequest(req, res) {
       if (!store.find("agents", (a) => a.agent_id === "agent_7F92A") || !store.find("merchants", (m) => m.merchant_id === "merchant_demo_electronics") || !store.find("users", (u) => u.id === "user_123" || u.user_id === "user_123")) {
         const keys = await seedDemo(store);
         privateKey = keys.privateKeyPem;
-      } else if (fs.existsSync(keyPath)) {
-        privateKey = fs.readFileSync(keyPath, "utf8");
       } else {
         const keys = generateEd25519KeyPair();
         const agent = store.find("agents", (a) => a.agent_id === "agent_7F92A");

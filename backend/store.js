@@ -223,7 +223,7 @@ export class PostgresStore {
 
   async flush() {
     const pending = this.pending.splice(0);
-    for (const operation of pending) await operation;
+    for (const operation of pending) await operation();
     await this.persistProfiles();
     await this.persistMutableCore();
   }
@@ -234,12 +234,12 @@ export class PostgresStore {
 
   reset(seed = {}) {
     this.data = { ...cloneEmpty(), ...seed };
-    this.pending.push(this.resetDatabase(seed));
+    this.pending.push(() => this.resetDatabase(seed));
   }
 
   insert(collection, record) {
     this.data[collection].push(record);
-    this.pending.push(this.persistRecord(collection, record));
+    this.pending.push(() => this.persistRecord(collection, record));
     return record;
   }
 
@@ -258,7 +258,7 @@ export class PostgresStore {
     };
     event.event_hash = sha256Hex(`${previous}:${JSON.stringify(event)}`);
     this.data.audit.push(event);
-    this.pending.push(this.persistRecord("audit", event));
+    this.pending.push(() => this.persistRecord("audit", event));
     return event;
   }
 

@@ -1,0 +1,38 @@
+{
+  "version": 2,
+  "functions": {
+    "api/[...path].js": {
+      "runtime": "nodejs22.x",
+      "maxDuration": 10
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/health",
+      "destination": "/api/health"
+    },
+    {
+      "source": "/v1/:path*",
+      "destination": "/api/v1/:path*"
+    },
+    {
+      "source": "/webhooks/:path*",
+      "destination": "/api/webhooks/:path*"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
+      ]
+    }
+  ]
+}

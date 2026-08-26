@@ -72,9 +72,9 @@ http://127.0.0.1:8787/security-lab
 
 ## Live Backend
 
-Public backend URL: pending Render account/API access.
+Public backend URL: pending Vercel deployment.
 
-Health URL: available locally at `http://127.0.0.1:8787/health`; after Render deployment use `https://your-render-url/health`.
+Health URL: available locally at `http://127.0.0.1:8787/health`; after Vercel deployment use `https://your-vercel-url/api/health` or the compatibility rewrite at `https://your-vercel-url/health`.
 
 Razorpay integration: not configured for this deployment milestone.
 
@@ -86,6 +86,7 @@ Deployment docs:
 - `docs/deployment.md`
 - `docs/deployment-limitations.md`
 - `docs/deployment-status.md`
+- `docs/vercel-migration-audit.md`
 
 Public smoke test:
 

@@ -43,5 +43,5 @@ Deployment blockers:
 - The implementation is Node, despite the spec title saying FastAPI.
 - Persistence is demo-grade JSON, not PostgreSQL.
 - Public deployment requires a platform project and generated `AGENTAUTH_TOKEN_SECRET`.
-- Render deployment requires Render account/API access; this workspace has no Render CLI, API key, or connector.
+- Vercel deployment uses `api/[...path].js` and `vercel.json`; see `docs/vercel-migration-audit.md`.
 - Razorpay is intentionally not required for this deployment task.

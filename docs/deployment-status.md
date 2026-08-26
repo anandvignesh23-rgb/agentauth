@@ -2,8 +2,8 @@
 
 | Component | Status | Notes |
 | --- | --- | --- |
-| Public backend | BLOCKED | Render Free Web Service config is ready, but no Render API key/session/connector is available in this workspace to create the service. |
-| HTTPS | BLOCKED | Requires a created Render service URL. |
+| Public backend | PENDING | Vercel serverless migration is ready; deployment URL will be recorded after deploy. |
+| HTTPS | PENDING | Vercel provides HTTPS on deployment URLs. |
 | Health endpoint | REAL | `GET /health` works locally and is configured as health check. |
 | API docs | REAL | `/docs` and `/openapi.json` are available. |
 | Authentication | PARTIAL | Token signing exists; full login/RBAC is not implemented. |
@@ -14,37 +14,37 @@
 | Agent-aware risk | REAL | Deterministic behavior scoring and profiles. |
 | Step-up | REAL | Step-up challenge approval flow works. |
 | Audit history | REAL | Hash-chained audit events. |
-| Production bind | REAL | Uses `HOST=0.0.0.0` and platform `PORT` in production. |
+| Production bind | REAL | Local wrapper uses host/port; Vercel uses serverless function handlers. |
 | CORS | REAL | Restrictive env-driven origin, no wildcard production default. |
 | Secret safety | REAL | `.env`, `.env.*`, data keys, and JSON store are ignored. |
 | Razorpay Test API | NOT CONFIGURED | Explicitly on hold for this task. |
-| PostgreSQL | NOT YET | JSON demo store remains. |
+| PostgreSQL | NOT YET | Explicitly not added in this task. |
 | Public smoke test script | REAL | `scripts/smoke_test_public_backend.py`. |
-| Clean deploy config | READY | `render.yaml`, `Dockerfile`, `start:prod`. |
+| Clean deploy config | READY | `vercel.json`, `api/[...path].js`, reusable app handler. |
 
 ## Deployment Attempt
 
-Provider attempted: Render Free Web Service
+Provider attempted: Vercel Serverless Functions
 
-Requested public Render URL: unavailable from this workspace
+Requested public Vercel URL: pending
 
-Actual public Render URL: not generated
+Actual public Vercel URL: pending
 
 Local capability check:
 
 ```bash
-command -v render
-printenv | rg '^RENDER'
+command -v vercel
+vercel whoami
 ```
 
-Result: no Render CLI and no Render API key/session were available. No public URL was generated.
+Result: Vercel CLI is installed and authenticated as `anandvignesh23-rgb`.
 
 ## Verification Completed Locally
 
 Production start command:
 
 ```bash
-ENVIRONMENT=production NODE_ENV=production HOST=127.0.0.1 PORT=8793 DATA_DIR=/tmp/agentauth-render-prod-smoke AGENTAUTH_TOKEN_SECRET=prod-smoke-secret npm run start:prod
+ENVIRONMENT=production NODE_ENV=production HOST=127.0.0.1 PORT=8793 DATA_DIR=/tmp/agentauth-vercel-prod-smoke JWT_SECRET=prod-smoke-secret npm run start
 ```
 
 Health verification:
@@ -60,7 +60,7 @@ Result:
   "status": "ok",
   "environment": "production",
   "database": "demo_store",
-  "data_dir": "/tmp/agentauth-render-prod-smoke",
+  "data_dir": "/tmp/agentauth-vercel-prod-smoke",
   "razorpay_configured": false,
   "payment_provider": "razorpay",
   "payment_integration_available": false

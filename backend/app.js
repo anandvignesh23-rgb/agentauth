@@ -323,8 +323,26 @@ export async function handleAgentAuthRequest(req, res) {
     }
     if (req.method === "POST" && p === "/v1/security-lab/run") {
       const data = await body(req);
-      await seedDemo(store);
-      let privateKey = fs.readFileSync(path.join(dataDir, "demo-agent-private.pem"), "utf8");
+      const keyPath = path.join(dataDir, "demo-agent-private.pem");
+      const publicKeyPath = path.join(dataDir, "demo-agent-public.pem");
+      let privateKey;
+      if (!store.find("agents", (a) => a.agent_id === "agent_7F92A") || !store.find("merchants", (m) => m.merchant_id === "merchant_demo_electronics") || !store.find("users", (u) => u.id === "user_123" || u.user_id === "user_123")) {
+        const keys = await seedDemo(store);
+        privateKey = keys.privateKeyPem;
+      } else if (fs.existsSync(keyPath)) {
+        privateKey = fs.readFileSync(keyPath, "utf8");
+      } else {
+        const keys = generateEd25519KeyPair();
+        const agent = store.find("agents", (a) => a.agent_id === "agent_7F92A");
+        agent.public_key = keys.publicKeyPem;
+        agent.public_key_fingerprint = fingerprint(keys.publicKeyPem);
+        agent.last_key_rotation_at = new Date().toISOString();
+        agent.key_rotation_count = (agent.key_rotation_count || 0) + 1;
+        fs.writeFileSync(keyPath, keys.privateKeyPem);
+        fs.writeFileSync(publicKeyPath, keys.publicKeyPem);
+        await store.persistRecord?.("agents", agent);
+        privateKey = keys.privateKeyPem;
+      }
       const base = {
         agent_id: "agent_7F92A",
         delegation_id: "del_9217",
@@ -358,6 +376,11 @@ export async function handleAgentAuthRequest(req, res) {
       };
       let signed = { ...base };
       let sent = { ...base };
+      if (!data.scenario || data.scenario === "valid") {
+        const order_id = id("ORD");
+        const delegation = createScenarioDelegation({ merchant_id: base.merchant_id, order_id, amount: base.amount });
+        signed = sent = { ...base, delegation_id: delegation.delegation_id, order_id };
+      }
       if (data.scenario === "tamper_amount") sent.amount = 9999;
       if (data.scenario === "tamper_merchant") sent.merchant_id = "merchant_malicious_electronics";
       if (data.scenario === "amount_attack") signed = sent = { ...base, amount: 49999 };

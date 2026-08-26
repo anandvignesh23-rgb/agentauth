@@ -11,6 +11,14 @@
       "destination": "/api/health"
     },
     {
+      "source": "/openapi.json",
+      "destination": "/api/openapi.json"
+    },
+    {
+      "source": "/docs",
+      "destination": "/api/docs"
+    },
+    {
       "source": "/v1/:path*",
       "destination": "/api/v1/:path*"
     },

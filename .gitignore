@@ -5,3 +5,4 @@ data/*.pem
 data/agentauth.json
 node_modules/
 .DS_Store
+.vercel

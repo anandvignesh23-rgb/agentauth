@@ -45,11 +45,7 @@ Production deployment:
 https://agentauth.vercel.app
 ```
 
-Latest deployment:
-
-```text
-https://agentauth-dqz9hbpso-anandvignesh23-rgbs-projects.vercel.app
-```
+Immutable deployment URLs change on every redeploy. Use the production alias above for verification.
 
 ## Verification Completed Locally
 

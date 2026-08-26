@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AgentAuth</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <p class="eyebrow">OAuth-style delegated payment authorization for AI agents</p>
+        <h1>AgentAuth</h1>
+        <p class="mode">RAZORPAY TEST MODE · real cryptographic authorization · demo payment funds</p>
+      </div>
+      <nav>
+        <a href="/security-lab">Security Lab</a>
+        <button id="reset">Reset Demo</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="metrics" id="metrics"></section>
+
+      <section class="split">
+        <div>
+          <div class="section-title">
+            <h2>Consumer Dashboard</h2>
+            <button id="createDelegation">Create Delegation</button>
+          </div>
+          <div id="agents"></div>
+          <div id="delegations"></div>
+        </div>
+        <div>
+          <h2>Merchant Dashboard</h2>
+          <div id="paymentConfig"></div>
+          <div id="tokens"></div>
+          <div id="executions"></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Authorization Requests</h2>
+        <div id="requests"></div>
+      </section>
+
+      <section>
+        <h2>Security Analytics</h2>
+        <div id="decisions"></div>
+      </section>
+
+      <section class="split">
+        <div>
+          <h2>Transaction Fraud</h2>
+          <div id="fraud"></div>
+        </div>
+        <div>
+          <h2>Agent Risk Leaderboard</h2>
+          <div id="agentRisk"></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Audit Timeline</h2>
+        <div id="audit"></div>
+      </section>
+    </main>
+
+    <dialog id="delegationDialog">
+      <form method="dialog">
+        <h2>Create Delegation</h2>
+        <label>Agent <input name="agent_id" value="agent_7F92A" /></label>
+        <label>Merchant <input name="merchant_id" value="merchant_demo_electronics" /></label>
+        <label>Order <input name="order_id" value="ORD-1934" /></label>
+        <label>Max Amount <input name="max_amount" type="number" value="4999" /></label>
+        <label>Currency <input name="currency" value="INR" /></label>
+        <label>Purpose <input name="purpose" value="Wireless Headphones" /></label>
+        <div class="notice">
+          You are authorizing Shopping Copilot to pay Demo Electronics for order ORD-1934 up to INR 4,999 for 15 minutes. This agent cannot change merchant, change order, exceed the maximum, or reuse this authorization after completion.
+        </div>
+        <menu>
+          <button value="cancel">Cancel</button>
+          <button id="submitDelegation" value="default">Confirm</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

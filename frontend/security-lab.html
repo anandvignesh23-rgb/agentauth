@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AgentAuth Security Lab</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <p class="eyebrow">Attack simulator</p>
+        <h1>Security Lab</h1>
+        <p class="mode">Every button calls the real AgentAuth backend authorization pipeline.</p>
+      </div>
+      <nav>
+        <a href="/">Dashboard</a>
+        <button id="reset">Reset Demo</button>
+      </nav>
+    </header>
+    <main>
+      <section class="lab-grid">
+        <button data-scenario="valid">Valid Request</button>
+        <button data-scenario="amount_attack">Amount Escalation</button>
+        <button data-scenario="merchant_attack">Merchant Substitution</button>
+        <button data-scenario="tamper_amount">Tamper Amount After Signing</button>
+        <button data-scenario="replay">Replay Request</button>
+        <button data-scenario="expired_delegation">Expired Delegation</button>
+        <button data-scenario="invalid_signature">Invalid Signature</button>
+        <button data-scenario="high_risk">High-Risk Request</button>
+        <button data-scenario="prompt_injection">Prompt-Injected Agent</button>
+        <button data-scenario="high_value_anomaly">High-Value Anomaly</button>
+        <button data-scenario="new_merchant_anomaly">New-Merchant Anomaly</button>
+        <button data-scenario="velocity_attack">Velocity Attack</button>
+        <button data-scenario="merchant_spread_spike">Merchant-Spread Spike</button>
+        <button data-scenario="denial_spike">Agent Denial Spike</button>
+        <button data-scenario="recent_key_rotation_high_value">Recent Key Rotation + High Value</button>
+        <button data-scenario="compromised_burst">Compromised-Agent Burst</button>
+      </section>
+      <section>
+        <h2>Result</h2>
+        <pre id="result" class="card">Choose a scenario.</pre>
+      </section>
+    </main>
+    <script src="/security-lab.js"></script>
+  </body>
+</html>

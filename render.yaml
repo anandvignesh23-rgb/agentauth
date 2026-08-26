@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: agentauth-api
+    runtime: node
+    plan: free
+    autoDeploy: true
+    buildCommand: npm install
+    startCommand: npm run start:prod
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATA_DIR
+        value: /tmp/agentauth
+      - key: PAYMENT_PROVIDER
+        value: razorpay
+      - key: AGENTAUTH_TOKEN_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://example.invalid

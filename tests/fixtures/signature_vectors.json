@@ -1,0 +1,23 @@
+{
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIOptATLens2wtIkre1X/B31wZHgYN+NrSmf6qpo6tkM5\n-----END PRIVATE KEY-----\n",
+  "public_key": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAr5zo9Xg9/X9/Nvaj72iU/y48GXIjEoMZF0AIercVk7Y=\n-----END PUBLIC KEY-----\n",
+  "payload": {
+    "agent_id": "agent_7F92A",
+    "delegation_id": "del_9217",
+    "merchant_id": "merchant_demo_electronics",
+    "order_id": "ORD-1934",
+    "amount": 4999,
+    "currency": "INR",
+    "nonce": "vector_nonce_001",
+    "timestamp": "2026-08-24T10:31:20Z"
+  },
+  "canonical_message": "agent_id=agent_7F92A\ndelegation_id=del_9217\nmerchant_id=merchant_demo_electronics\norder_id=ORD-1934\namount=4999\ncurrency=INR\nnonce=vector_nonce_001\ntimestamp=2026-08-24T10:31:20Z",
+  "valid_signature": "bCAfDDRKZaUqMvh2Mu2wPCggmVTtOz4zPdfDtkjN2D8IiL1nrfjTBDrf9xQVA8cDdkTV9FREdQq5JSi6IJ+2CA==",
+  "tampered_variants": [
+    { "field": "amount", "value": 9999 },
+    { "field": "merchant_id", "value": "merchant_malicious_electronics" },
+    { "field": "order_id", "value": "ORD-OTHER" },
+    { "field": "nonce", "value": "vector_nonce_002" },
+    { "field": "timestamp", "value": "2026-08-24T10:32:20Z" }
+  ]
+}

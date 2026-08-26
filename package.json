@@ -1,0 +1,16 @@
+{
+  "name": "agentauth",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node backend/server.js",
+    "start:prod": "node scripts/start_production.mjs",
+    "dev": "node backend/server.js",
+    "seed": "node scripts/seed_demo.mjs",
+    "reset": "node scripts/reset_demo.mjs",
+    "demo": "node sdk/examples/demo-agent.mjs",
+    "shopping-demo": "node examples/shopping_agent.mjs",
+    "test": "node --test tests/*.test.mjs"
+  }
+}

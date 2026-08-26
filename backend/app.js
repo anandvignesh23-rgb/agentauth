@@ -338,6 +338,7 @@ export async function handleAgentAuthRequest(req, res) {
         agent.public_key_fingerprint = fingerprint(keys.publicKeyPem);
         agent.last_key_rotation_at = new Date().toISOString();
         agent.key_rotation_count = (agent.key_rotation_count || 0) + 1;
+        fs.mkdirSync(dataDir, { recursive: true });
         fs.writeFileSync(keyPath, keys.privateKeyPem);
         fs.writeFileSync(publicKeyPath, keys.publicKeyPem);
         await store.persistRecord?.("agents", agent);

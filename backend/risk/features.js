@@ -38,15 +38,16 @@ export function buildRiskProfiles(store) {
   const now = Date.now();
 
   store.data.userRiskProfiles = users.map((user) => {
-    const userDelegations = usedDelegations.filter((d) => d.user_id === user.id);
+    const userId = user.user_id || user.id;
+    const userDelegations = usedDelegations.filter((d) => d.user_id === userId);
     const amounts = userDelegations.map((d) => Number(d.max_amount));
     const denied = decisions.filter((d) => {
       const req = requests.find((r) => r.request_id === d.request_id);
       const del = store.all("delegations").find((x) => x.delegation_id === req?.delegation_id);
-      return del?.user_id === user.id && d.decision === "DENY";
+      return del?.user_id === userId && d.decision === "DENY";
     });
     return {
-      user_id: user.id,
+      user_id: userId,
       transaction_count: userDelegations.length,
       successful_count: userDelegations.length,
       denied_count: denied.length,

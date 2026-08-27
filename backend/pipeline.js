@@ -7,8 +7,14 @@ import { maybeAutoSuspendAgent, updateAgentReputation } from "./risk/reputation.
 const CLOCK_WINDOW_MS = 2 * 60 * 1000;
 const POLICY_VERSION = "agentauth-policy-2026-08-24";
 
+async function persistAuthorizationRequest(store, request) {
+  request.updated_at = new Date().toISOString();
+  await store.persistRecord?.("requests", request);
+}
+
 async function deny(store, request, reason_codes, risk_score = 0) {
   request.status = "DENIED";
+  request.final_decision = "DENY";
   const decision = {
     id: id("dec"),
     request_id: request.request_id,
@@ -28,6 +34,7 @@ async function deny(store, request, reason_codes, risk_score = 0) {
   maybeAutoSuspendAgent(store, request.agent_id);
   buildRiskProfiles(store);
   store.audit(request.request_id, "DECISION", "POLICY_ENGINE", "Decision: DENY", { reason_codes });
+  await persistAuthorizationRequest(store, request);
   await store.save();
   console.log(JSON.stringify({
     event: "authorization_decision",
@@ -122,6 +129,7 @@ export async function authorizePayment({ store, tokenSecret, payload, signature,
   if (delegation.status === "USED") return deny(store, request, ["DELEGATION_ALREADY_USED"]);
   if (new Date(delegation.expires_at).getTime() <= Date.now()) {
     delegation.status = "EXPIRED";
+    await store.persistRecord?.("delegations", delegation);
     await store.save();
     return deny(store, request, ["DELEGATION_EXPIRED"]);
   }
@@ -164,6 +172,10 @@ export async function authorizePayment({ store, tokenSecret, payload, signature,
   let decision = risk.combined.decision;
 
   request.status = decision === "ALLOW" ? "ALLOWED" : decision;
+  request.final_decision = decision;
+  request.transaction_risk_score = risk.transaction.transaction_risk_score;
+  request.agent_risk_score = risk.agent.agent_risk_score;
+  request.combined_risk_score = risk.combined.combined_score;
   if (decision === "STEP_UP") {
     request.step_up_expires_at = new Date(Date.now() + Number(process.env.STEP_UP_TTL_SECONDS || 300) * 1000).toISOString();
     store.insert("stepUpChallenges", {
@@ -205,6 +217,7 @@ export async function authorizePayment({ store, tokenSecret, payload, signature,
   maybeAutoSuspendAgent(store, request.agent_id);
   buildRiskProfiles(store);
   store.audit(request.request_id, "DECISION", "POLICY_ENGINE", `Decision: ${decision}.`, { reason_codes });
+  await persistAuthorizationRequest(store, request);
   console.log(JSON.stringify({
     event: "authorization_decision",
     request_id: request.request_id,
@@ -276,6 +289,7 @@ export async function approveStepUp({ store, tokenSecret, request_id, approved }
     return deny(store, request, [code]);
   }
   request.status = "ALLOWED";
+  request.final_decision = "ALLOW";
   const consumed = await store.consumeDelegation(delegation.delegation_id);
   if (!consumed) return deny(store, request, ["DELEGATION_ALREADY_USED"]);
   const payment_authorization = await issuePaymentToken(store, tokenSecret, request, delegation);
@@ -292,6 +306,7 @@ export async function approveStepUp({ store, tokenSecret, request_id, approved }
   };
   store.insert("decisions", decision);
   store.audit(request_id, "DECISION", "POLICY_ENGINE", "Decision: ALLOW after step-up.", { reason_codes: [code] });
+  await persistAuthorizationRequest(store, request);
   await store.save();
   return { decision: "ALLOW", request_id, reason_codes: [code], explanation: decision.explanation, payment_authorization };
 }

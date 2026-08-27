@@ -107,6 +107,11 @@ export function hmacHex(secret, body) {
   return crypto.createHmac("sha256", secret).update(body).digest("hex");
 }
 
+export function timingSafeEqualText(left, right) {
+  if (Buffer.byteLength(left || "") !== Buffer.byteLength(right || "")) return false;
+  return crypto.timingSafeEqual(Buffer.from(left || ""), Buffer.from(right || ""));
+}
+
 export function sha256Hex(body) {
   return crypto.createHash("sha256").update(body).digest("hex");
 }

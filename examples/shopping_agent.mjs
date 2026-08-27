@@ -12,7 +12,7 @@ const authorization = await agent.authorizePayment({
   delegation_id: "del_9217",
   merchant_id: "merchant_demo_electronics",
   order_id: "ORD-1934",
-  amount: 4999,
+  amount: 499900,
   currency: "INR"
 });
 
@@ -26,7 +26,7 @@ const verified = await merchant.verifyPaymentToken({
   token,
   merchant_id: "merchant_demo_electronics",
   order_id: "ORD-1934",
-  amount: 4999,
+  amount: 499900,
   currency: "INR"
 });
 
@@ -37,7 +37,7 @@ const order = await merchant.createPaymentOrder({
   token,
   merchant_id: "merchant_demo_electronics",
   order_id: "ORD-1934",
-  amount: 4999,
+  amount: 499900,
   currency: "INR"
 });
 

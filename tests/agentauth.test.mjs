@@ -24,11 +24,16 @@ function fixture() {
       { merchant_id: "merchant_new_luxury", name: "New Luxury", verification_status: "PENDING" }
     ],
     delegations: [
-      { delegation_id: "del_9217", user_id: "user_123", agent_id: "agent_7F92A", merchant_id: "merchant_demo_electronics", order_id: "ORD-1934", max_amount: 4999, currency: "INR", purpose: "Headphones", expires_at: new Date(Date.now() + 60_000).toISOString(), status: "ACTIVE", created_at: new Date().toISOString() },
-      { delegation_id: "del_expired", user_id: "user_123", agent_id: "agent_7F92A", merchant_id: "merchant_demo_electronics", order_id: "ORD-OLD", max_amount: 4999, currency: "INR", purpose: "Old", expires_at: new Date(Date.now() - 60_000).toISOString(), status: "ACTIVE", created_at: new Date().toISOString() },
-      { delegation_id: "del_highrisk", user_id: "user_123", agent_id: "agent_7F92A", merchant_id: "merchant_new_luxury", order_id: "ORD-40000", max_amount: 40000, currency: "INR", purpose: "High", expires_at: new Date(Date.now() + 60_000).toISOString(), status: "ACTIVE", created_at: new Date().toISOString() }
+      { delegation_id: "del_9217", user_id: "user_123", agent_id: "agent_7F92A", merchant_id: "merchant_demo_electronics", order_id: "ORD-1934", max_amount: 499900, currency: "INR", purpose: "Headphones", expires_at: new Date(Date.now() + 60_000).toISOString(), status: "ACTIVE", created_at: new Date().toISOString() },
+      { delegation_id: "del_expired", user_id: "user_123", agent_id: "agent_7F92A", merchant_id: "merchant_demo_electronics", order_id: "ORD-OLD", max_amount: 499900, currency: "INR", purpose: "Old", expires_at: new Date(Date.now() - 60_000).toISOString(), status: "ACTIVE", created_at: new Date().toISOString() },
+      { delegation_id: "del_highrisk", user_id: "user_123", agent_id: "agent_7F92A", merchant_id: "merchant_new_luxury", order_id: "ORD-40000", max_amount: 4000000, currency: "INR", purpose: "High", expires_at: new Date(Date.now() + 60_000).toISOString(), status: "ACTIVE", created_at: new Date().toISOString() }
     ],
-    requests: [], decisions: [], tokens: [], nonces: [], audit: [], razorpayOrders: [], razorpayEvents: [], paymentExecutions: [], merchantOrders: [], webhookEvents: []
+    requests: [], decisions: [], tokens: [], nonces: [], audit: [], razorpayOrders: [], razorpayEvents: [], paymentExecutions: [],
+    merchantOrders: [
+      { merchant_id: "merchant_demo_electronics", external_order_id: "ORD-1934", description: "Headphones", amount: 499900, currency: "INR", status: "OPEN", created_at: new Date().toISOString(), paid_at: null },
+      { merchant_id: "merchant_new_luxury", external_order_id: "ORD-40000", description: "High", amount: 4000000, currency: "INR", status: "OPEN", created_at: new Date().toISOString(), paid_at: null }
+    ],
+    webhookEvents: []
   });
   return { store, privateKeyPem: keys.privateKeyPem, tokenSecret: "test-secret" };
 }
@@ -39,7 +44,7 @@ function payload(overrides = {}) {
     delegation_id: "del_9217",
     merchant_id: "merchant_demo_electronics",
     order_id: "ORD-1934",
-    amount: 4999,
+    amount: 499900,
     currency: "INR",
     nonce: crypto.randomBytes(12).toString("hex"),
     timestamp: new Date().toISOString(),
@@ -61,22 +66,22 @@ test("allows a valid transaction and starts one exactly-once payment execution",
     store: ctx.store,
     tokenSecret: ctx.tokenSecret,
     token: result.payment_authorization.token,
-    expected: { merchant_id: "merchant_demo_electronics", order_id: "ORD-1934", amount: 4999, currency: "INR" }
+    expected: { merchant_id: "merchant_demo_electronics", order_id: "ORD-1934", amount: 499900, currency: "INR" }
   });
   assert.equal(verified.valid, true);
   const execution = await createPaymentExecution({
     store: ctx.store,
     tokenSecret: ctx.tokenSecret,
     token: result.payment_authorization.token,
-    expected: { merchant_id: "merchant_demo_electronics", order_id: "ORD-1934", amount: 4999, currency: "INR" }
+    expected: { merchant_id: "merchant_demo_electronics", order_id: "ORD-1934", amount: 499900, currency: "INR" }
   });
   assert.equal(execution.ok, true);
-  assert.equal(execution.execution.status, "CHECKOUT_OPENED");
+  assert.equal(execution.execution.status, "ORDER_CREATED");
   const replay = await createPaymentExecution({
     store: ctx.store,
     tokenSecret: ctx.tokenSecret,
     token: result.payment_authorization.token,
-    expected: { merchant_id: "merchant_demo_electronics", order_id: "ORD-1934", amount: 4999, currency: "INR" }
+    expected: { merchant_id: "merchant_demo_electronics", order_id: "ORD-1934", amount: 499900, currency: "INR" }
   });
   assert.equal(replay.ok, true);
   assert.equal(replay.idempotent, true);
@@ -103,7 +108,7 @@ test("rejects replayed nonce", async () => {
 
 test("rejects delegation scope violations", async () => {
   let ctx = fixture();
-  assert.deepEqual((await auth(ctx, payload({ amount: 9999 }))).reason_codes, ["AMOUNT_EXCEEDS_DELEGATION"]);
+  assert.deepEqual((await auth(ctx, payload({ amount: 999900 }))).reason_codes, ["AMOUNT_EXCEEDS_DELEGATION"]);
   ctx = fixture();
   assert.deepEqual((await auth(ctx, payload({ merchant_id: "merchant_new_luxury" }))).reason_codes, ["MERCHANT_MISMATCH"]);
   ctx = fixture();
@@ -121,7 +126,7 @@ test("rejects expired delegation", async () => {
 
 test("produces step-up for medium risk and approval issues token", async () => {
   const ctx = fixture();
-  const result = await auth(ctx, payload({ delegation_id: "del_highrisk", merchant_id: "merchant_new_luxury", order_id: "ORD-40000", amount: 40000 }));
+  const result = await auth(ctx, payload({ delegation_id: "del_highrisk", merchant_id: "merchant_new_luxury", order_id: "ORD-40000", amount: 4000000 }));
   assert.equal(result.decision, "STEP_UP");
   const approved = await approveStepUp({ store: ctx.store, tokenSecret: ctx.tokenSecret, request_id: result.request_id, approved: true });
   assert.equal(approved.decision, "ALLOW");
@@ -137,7 +142,7 @@ test("canonical signature vectors reject changed signed fields", () => {
     "delegation_id=del_9217",
     "merchant_id=merchant_demo_electronics",
     "order_id=ORD-1934",
-    "amount=4999",
+    "amount=499900",
     "currency=INR",
     "nonce=vector_nonce",
     "timestamp=2026-08-24T10:31:20Z"
@@ -167,7 +172,7 @@ test("100 simultaneous token consume requests reserve one token execution", asyn
   process.env.PAYMENT_PROVIDER = "mock";
   const ctx = fixture();
   const result = await auth(ctx, payload());
-  const expected = { merchant_id: "merchant_demo_electronics", order_id: "ORD-1934", amount: 4999, currency: "INR" };
+  const expected = { merchant_id: "merchant_demo_electronics", order_id: "ORD-1934", amount: 499900, currency: "INR" };
   const attempts = await Promise.all(Array.from({ length: 100 }, () => createPaymentExecution({ store: ctx.store, tokenSecret: ctx.tokenSecret, token: result.payment_authorization.token, expected })));
   assert.equal(ctx.store.all("paymentExecutions").length, 1);
   assert.equal(attempts.filter((a) => a.ok && !a.idempotent).length, 1);
@@ -184,8 +189,8 @@ test("revoked agent blocks future requests", async () => {
 
 test("transaction fraud engine emits expected low and high amount reason codes", () => {
   const low = scoreTransactionRisk({
-    amount: 1999,
-    user_p95_amount: 5000,
+    amount: 199900,
+    user_p95_amount: 500000,
     user_transaction_count: 10,
     merchant_seen_by_user: true,
     requests_last_1m: 1,
@@ -201,8 +206,8 @@ test("transaction fraud engine emits expected low and high amount reason codes",
   assert.equal(low.transaction_risk_score < 0.2, true);
 
   const high = scoreTransactionRisk({
-    amount: 45000,
-    user_p95_amount: 9000,
+    amount: 4500000,
+    user_p95_amount: 900000,
     user_transaction_count: 10,
     merchant_seen_by_user: false,
     requests_last_1m: 6,

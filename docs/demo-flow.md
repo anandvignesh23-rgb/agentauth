@@ -6,4 +6,4 @@
 4. Run `npm run demo`.
 5. Watch the dashboard update with request counts, decisions, tokens, and audit events.
 
-The seeded agent is `agent_7F92A`, the merchant is `merchant_demo_electronics`, and the legitimate order is `ORD-1934` for `INR 4999`.
+The seeded agent is `agent_7F92A`, the merchant is `merchant_demo_electronics`, and the legitimate order is `ORD-1934` for `INR 499900` minor units, equal to INR 4,999.00.

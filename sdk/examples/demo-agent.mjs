@@ -19,7 +19,7 @@ function payload(overrides = {}) {
     delegation_id: "del_9217",
     merchant_id: "merchant_demo_electronics",
     order_id: "ORD-1934",
-    amount: 4999,
+    amount: 499900,
     currency: "INR",
     nonce: crypto.randomBytes(12).toString("hex"),
     timestamp: new Date().toISOString(),
@@ -47,7 +47,7 @@ if (legit.result.payment_authorization) {
       token: legit.result.payment_authorization.token,
       merchant_id: "merchant_demo_electronics",
       order_id: "ORD-1934",
-      amount: 4999,
+      amount: 499900,
       currency: "INR"
     })
   }).then((r) => r.json());
@@ -72,9 +72,9 @@ console.log(JSON.stringify(await post("/v1/authorize-payment", replayPayload, re
 await fetch(`${baseUrl}/v1/dev/reset`, { method: "POST" });
 await authorize("Scenario F: expired delegation", payload({ delegation_id: "del_expired", order_id: "ORD-OLD" }));
 await fetch(`${baseUrl}/v1/dev/reset`, { method: "POST" });
-await authorize("Prompt injection demo: compromised agent tries attacker merchant and ₹49,999", payload({ merchant_id: "merchant_malicious_electronics", amount: 49999 }));
+await authorize("Prompt injection demo: compromised agent tries attacker merchant and INR 49,999", payload({ merchant_id: "merchant_malicious_electronics", amount: 4999900 }));
 await fetch(`${baseUrl}/v1/dev/reset`, { method: "POST" });
-const highRisk = await authorize("Scenario G: high-risk step-up", payload({ delegation_id: "del_highrisk", merchant_id: "merchant_new_luxury", order_id: "ORD-40000", amount: 40000 }));
+const highRisk = await authorize("Scenario G: high-risk step-up", payload({ delegation_id: "del_highrisk", merchant_id: "merchant_new_luxury", order_id: "ORD-40000", amount: 4000000 }));
 if (highRisk.result.decision === "STEP_UP") {
   const approved = await fetch(`${baseUrl}/v1/authorization-requests/${highRisk.result.request_id}/approve`, { method: "POST" }).then((r) => r.json());
   console.log("\nScenario G: user approves step-up");

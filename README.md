@@ -76,9 +76,9 @@ Public backend URL: https://agentauth.vercel.app
 
 Health URL: https://agentauth.vercel.app/api/health, with compatibility rewrite at `https://agentauth.vercel.app/health`.
 
-Razorpay integration: not configured for this deployment milestone.
+Razorpay integration: implemented for Test Mode, blocked on live remote verification until test credentials are configured.
 
-Persistence: current demo store, backed by JSON at `${DATA_DIR}/agentauth.json`.
+Persistence: Supabase PostgreSQL in production, with JSON retained only for local explicit demo/test mode.
 
 Deployment docs:
 
@@ -87,6 +87,8 @@ Deployment docs:
 - `docs/deployment-limitations.md`
 - `docs/deployment-status.md`
 - `docs/vercel-migration-audit.md`
+- `docs/razorpay-integration-audit.md`
+- `docs/razorpay-setup.md`
 
 Public smoke test:
 
@@ -102,7 +104,7 @@ Seed data creates:
 - agent: `agent_7F92A`
 - merchant: `merchant_demo_electronics`
 - order: `ORD-1934`
-- amount: `INR 4999`
+- amount: `INR 499900` minor units, equal to INR 4,999.00
 - demo private key: `data/demo-agent-private.pem`
 
 The UI clearly labels Razorpay Test Mode. No real money is moved.
@@ -130,10 +132,16 @@ export RAZORPAY_KEY_SECRET=...
 export RAZORPAY_WEBHOOK_SECRET=...
 ```
 
-If these are missing, `/health` reports Razorpay unavailable and `/v1/payments/create-order` refuses to fake a Razorpay order. For local unit tests only, explicitly set:
+If these are missing, `/health` reports Razorpay unavailable and `/v1/payments/create-order` refuses to fake a Razorpay order. Mock mode is disabled in production. For local unit tests only, explicitly set:
 
 ```bash
 export PAYMENT_PROVIDER=mock
+```
+
+Run the credential-gated live Test Mode order check only after setting Razorpay Test Mode credentials:
+
+```bash
+npm run test:razorpay
 ```
 
 ## Protocol
@@ -145,7 +153,7 @@ agent_id=agent_7F92A
 delegation_id=del_9217
 merchant_id=merchant_demo_electronics
 order_id=ORD-1934
-amount=4999
+amount=499900
 currency=INR
 nonce=abc123
 timestamp=2026-08-24T10:31:20Z

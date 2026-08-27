@@ -14,4 +14,4 @@ Search terms reviewed: `mock`, `fake`, `stub`, `demo`, `simulate`, `random`, `ha
 | `sdk/python/agentauth/__init__.py` | Python facade raises `NotImplementedError`. | Partial SDK | REPLACE WITH REAL PYTHON SDK |
 | JSON store | Local durable persistence. | Partial production boundary | REPLACE WITH POSTGRESQL FOR DEPLOYMENT |
 
-Critical payment boundary: Razorpay order creation is not silently faked. If `PAYMENT_PROVIDER=razorpay` and credentials are missing, the API returns `RAZORPAY_INTEGRATION_UNAVAILABLE`. Mock mode must be explicitly selected.
+Critical payment boundary: Razorpay order creation is not silently faked. If `PAYMENT_PROVIDER=razorpay` and credentials are missing, the API returns `RAZORPAY_NOT_CONFIGURED`. Mock mode must be explicitly selected and is disabled in production.

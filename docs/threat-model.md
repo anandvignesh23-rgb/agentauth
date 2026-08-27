@@ -30,7 +30,7 @@ Residual risk: production needs developer auth, approvals, and hardware-backed k
 
 ## Request Tampering
 
-Attack: change `4999` to `9999`, merchant, order, nonce, or timestamp.
+Attack: change `499900` to `999900`, merchant, order, nonce, or timestamp.
 Impact: transaction scope changes after signature.
 Mitigation: all relevant fields are in the Ed25519 canonical payload.
 Residual risk: canonicalization bugs; covered by vectors and tests.

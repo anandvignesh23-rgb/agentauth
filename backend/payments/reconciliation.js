@@ -11,9 +11,14 @@ export async function reconcilePaymentExecution({ store, provider, execution_id 
     if (merchantOrder) {
       merchantOrder.status = "PAID";
       merchantOrder.paid_at = execution.paid_at;
+      merchantOrder.razorpay_payment_id = execution.razorpay_payment_id;
+      await store.persistRecord?.("merchantOrders", merchantOrder);
+      store.audit(execution.authorization_request_id, "MERCHANT_ORDER_PAID", "AGENTAUTH", `Merchant order ${merchantOrder.external_order_id} marked PAID.`, { execution_id: execution.execution_id });
     }
+    store.audit(execution.authorization_request_id, "PAYMENT_CAPTURED", "RAZORPAY", `Payment execution ${execution.execution_id} captured.`, { razorpay_order_id: execution.razorpay_order_id });
   }
   store.audit(execution.authorization_request_id, "PAYMENT_RECONCILED", "RAZORPAY", `Payment execution ${execution.execution_id} reconciled.`, { provider_order_status: order.status });
-  store.save();
+  await store.persistRecord?.("paymentExecutions", execution);
+  await store.save();
   return execution;
 }

@@ -17,7 +17,7 @@
 | Production bind | REAL | Local wrapper uses host/port; Vercel uses serverless function handlers. |
 | CORS | REAL | Restrictive env-driven origin, no wildcard production default. |
 | Secret safety | REAL | `.env`, `.env.*`, data keys, and JSON store are ignored. |
-| Razorpay Test API | NOT CONFIGURED | Explicitly on hold for this task. |
+| Razorpay Test API | BLOCKED_BY_CREDENTIALS | Integration code is implemented; live order creation needs Vercel `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`. |
 | PostgreSQL | LIVE | Supabase project `qusdfmrpujmvsqeqxwom`; Vercel production uses the pooled `DATABASE_URL`. |
 | Public smoke test script | REAL | `scripts/smoke_test_public_backend.py`. |
 | Clean deploy config | READY | `vercel.json`, `api/[...path].js`, reusable app handler, Supabase migration. |
@@ -99,8 +99,10 @@ Result:
   "runtime": "vercel",
   "persistence": "supabase_postgres",
   "environment": "production",
+  "database_connected": true,
   "database": "supabase_postgres",
   "razorpay_configured": false,
+  "razorpay_webhook_configured": false,
   "payment_provider": "razorpay",
   "payment_integration_available": false
 }
@@ -125,3 +127,19 @@ select count(*) from transaction_risk_snapshots;
 ```
 
 Result: rows are present for the public smoke authorization flow in Supabase PostgreSQL.
+
+## Razorpay Status
+
+| Capability | Status |
+| --- | --- |
+| Provider abstraction | REAL |
+| Razorpay Test provider | REAL WHEN CONFIGURED |
+| Order creation route | REAL WHEN CONFIGURED |
+| Razorpay Checkout UI handoff | REAL WHEN CONFIGURED |
+| Checkout signature verification | REAL |
+| Webhook raw-body verification | REAL |
+| Webhook dedupe | REAL |
+| Payment reconciliation | REAL |
+| Live Mode | NOT IMPLEMENTED |
+| Remote real Test Mode order | BLOCKED_BY_CREDENTIALS |
+| Remote Test Mode checkout/payment/webhook | BLOCKED_BY_CREDENTIALS |

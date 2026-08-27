@@ -34,13 +34,15 @@ PG_POOL_MAX=5
 
 `AGENTAUTH_TOKEN_SECRET` remains supported as a backwards-compatible alias for `JWT_SECRET`. `DATA_DIR` is used only for explicit JSON demo mode.
 
-Razorpay variables are optional for this deployment milestone:
+Razorpay variables are required for live Razorpay Test Mode order, checkout, and webhook verification:
 
 ```env
 RAZORPAY_KEY_ID=
 RAZORPAY_KEY_SECRET=
 RAZORPAY_WEBHOOK_SECRET=
 ```
+
+When these are absent, `/health` reports `razorpay_configured: false` and payment order creation returns a structured error instead of falling back to mock mode.
 
 ## Vercel Workflow
 
@@ -68,6 +70,6 @@ curl https://agentauth.vercel.app/openapi.json
 
 Known limitations:
 
-- Razorpay integration is not configured in this milestone.
+- Razorpay Test Mode integration code is implemented, but remote live order/checkout/webhook verification is blocked until Test Mode credentials are configured in Vercel.
 - PostgreSQL/Supabase schema is implemented and the current production deployment uses the Supabase pooled `DATABASE_URL`.
 - JSON demo persistence is local/demo only and is not production-grade.

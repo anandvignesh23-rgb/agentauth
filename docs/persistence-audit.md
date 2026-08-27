@@ -1,6 +1,6 @@
 # Persistence Audit
 
-Date: 2026-08-26
+Date: 2026-08-27
 
 ## Summary
 
@@ -44,6 +44,6 @@ This migration adds a Supabase PostgreSQL schema and a PostgreSQL-backed store s
 - Step-up approval calls `store.consumeDelegation(...)` and issues the token after the durable state transition.
 - Payment execution calls `store.reservePaymentToken(...)` and `store.consumePaymentToken(...)`; failed payment-provider calls do not return reserved tokens to `ACTIVE`.
 
-## Remaining Boundary
+## Production Status
 
-Supabase schema is applied to project `qusdfmrpujmvsqeqxwom`. The Vercel app must be given the Supabase pooled `DATABASE_URL` before production can be redeployed in durable mode. Without `DATABASE_URL`, production fails closed unless `PERSISTENCE_MODE=json` is explicitly set for a demo-only deployment.
+Supabase schema is applied to project `qusdfmrpujmvsqeqxwom`. Vercel production is configured with the Supabase pooled `DATABASE_URL`, and `GET /api/health` reports `persistence: "supabase_postgres"`. Without `DATABASE_URL`, production fails closed unless `PERSISTENCE_MODE=json` is explicitly set for a demo-only deployment.

@@ -18,7 +18,7 @@
 | CORS | REAL | Restrictive env-driven origin, no wildcard production default. |
 | Secret safety | REAL | `.env`, `.env.*`, data keys, and JSON store are ignored. |
 | Razorpay Test API | NOT CONFIGURED | Explicitly on hold for this task. |
-| PostgreSQL | SCHEMA APPLIED | Supabase project `qusdfmrpujmvsqeqxwom`; Vercel still needs `DATABASE_URL` secret for cutover. |
+| PostgreSQL | LIVE | Supabase project `qusdfmrpujmvsqeqxwom`; Vercel production uses the pooled `DATABASE_URL`. |
 | Public smoke test script | REAL | `scripts/smoke_test_public_backend.py`. |
 | Clean deploy config | READY | `vercel.json`, `api/[...path].js`, reusable app handler, Supabase migration. |
 
@@ -97,10 +97,9 @@ Result:
 {
   "status": "ok",
   "runtime": "vercel",
-  "persistence": "temporary",
+  "persistence": "supabase_postgres",
   "environment": "production",
-  "database": "demo_store",
-  "data_dir": "/tmp/agentauth",
+  "database": "supabase_postgres",
   "razorpay_configured": false,
   "payment_provider": "razorpay",
   "payment_integration_available": false
@@ -114,3 +113,15 @@ python3 scripts/smoke_test_public_backend.py --base-url https://agentauth.vercel
 ```
 
 Result: passed for `/health`, `/v1/agents`, `/openapi.json`, and `/v1/security-lab/run`.
+
+Supabase persistence check:
+
+```sql
+select count(*) from authorization_requests;
+select count(*) from nonce_records;
+select count(*) from payment_authorization_tokens;
+select count(*) from audit_events;
+select count(*) from transaction_risk_snapshots;
+```
+
+Result: rows are present for the public smoke authorization flow in Supabase PostgreSQL.

@@ -224,8 +224,6 @@ export class PostgresStore {
   async flush() {
     const pending = this.pending.splice(0);
     for (const operation of pending) await operation();
-    await this.persistProfiles();
-    await this.persistMutableCore();
   }
 
   save() {

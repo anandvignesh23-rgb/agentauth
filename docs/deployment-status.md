@@ -42,10 +42,13 @@ Result: Vercel CLI is installed and authenticated as `anandvignesh23-rgb`.
 Production deployment:
 
 ```text
+https://agentauth-28fldkddh-anandvignesh23-rgbs-projects.vercel.app
 https://agentauth.vercel.app
 ```
 
 Immutable deployment URLs change on every redeploy. Use the production alias above for verification.
+
+Latest production commit: `73b1219` (`Persist authorization status updates`).
 
 ## Verification Completed Locally
 
@@ -82,6 +85,14 @@ python3 scripts/smoke_test_public_backend.py --base-url http://127.0.0.1:8793 --
 ```
 
 Result: passed for `/health`, `/v1/agents`, `/openapi.json`, and `/v1/security-lab/run`.
+
+Razorpay no-credentials boundary:
+
+```text
+POST /v1/payments/create-order
+```
+
+Result: after a valid `ALLOW` demo authorization, production returns HTTP `424` with `RAZORPAY_NOT_CONFIGURED` and records the payment execution as `FAILED`. No mock Razorpay order is created in production.
 
 ## Verification Completed Remotely
 

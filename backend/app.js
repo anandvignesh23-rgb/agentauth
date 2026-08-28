@@ -65,8 +65,8 @@ function metrics(store) {
   };
 }
 
-function serveStatic(req, res) {
-  const urlPath = req.url === "/" ? "/index.html" : req.url === "/security-lab" ? "/security-lab.html" : req.url === "/evidence" ? "/evidence.html" : req.url;
+function serveStatic(routePath, res) {
+  const urlPath = routePath === "/" ? "/index.html" : routePath === "/security-lab" ? "/security-lab.html" : routePath === "/evidence" ? "/evidence.html" : routePath;
   const file = path.join(root, "frontend", path.normalize(urlPath));
   if (!file.startsWith(path.join(root, "frontend")) || !fs.existsSync(file)) return false;
   const type = file.endsWith(".css") ? "text/css" : file.endsWith(".js") ? "text/javascript" : "text/html";
@@ -81,7 +81,7 @@ export async function handleAgentAuthRequest(req, res) {
     if (req.method === "OPTIONS") return json(res, 200, {});
     const url = new URL(req.url, `http://${req.headers.host}`);
     const p = url.pathname === "/api" ? "/" : url.pathname.replace(/^\/api(?=\/|$)/, "") || "/";
-    if (req.method === "GET" && serveStatic(req, res)) return;
+    if (req.method === "GET" && serveStatic(p, res)) return;
     if (req.method === "GET" && p === "/health") return json(res, 200, {
       status: "ok",
       ...(isVercel ? { runtime: "vercel", persistence: store.kind === "postgres" ? "supabase_postgres" : "temporary" } : {}),

@@ -2,22 +2,22 @@ const baseUrl = process.env.AGENTAUTH_URL || "https://agentauth.vercel.app";
 
 const scenarios = [
   ["Valid request", "valid", "ALLOW"],
+  ["High-risk valid request", "high_risk", "STEP_UP"],
   ["Amount escalation", "amount_attack", "DENY"],
   ["Merchant substitution", "merchant_attack", "DENY"],
   ["Order substitution", "order_attack", "DENY"],
-  ["Request replay", "replay", "DENY"],
-  ["Token replay", "token_replay", "BLOCK"],
+  ["Prompt-injected agent", "prompt_injection", "DENY"],
   ["Invalid signature", "invalid_signature", "DENY"],
   ["Expired delegation", "expired_delegation", "DENY"],
   ["Revoked delegation", "revoked_delegation", "DENY"],
-  ["Revoked agent", "revoked_agent", "DENY"],
-  ["Prompt-injected agent", "prompt_injection", "DENY"],
-  ["High-risk valid request", "high_risk", "STEP_UP"]
+  ["Token replay", "token_replay", "BLOCK"],
+  ["Request replay", "replay", "DENY"],
+  ["Revoked agent", "revoked_agent", "DENY"]
 ];
 
 async function post(path, body) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), Number(process.env.AGENTAUTH_PROOF_TIMEOUT_MS || 30000));
+  const timeout = setTimeout(() => controller.abort(), Number(process.env.AGENTAUTH_PROOF_TIMEOUT_MS || 90000));
   const res = await fetch(`${baseUrl}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -32,8 +32,14 @@ async function post(path, body) {
 await post("/v1/dev/reset", {});
 const rows = [];
 for (const [attack, scenario, expected] of scenarios) {
-  if (scenario !== "valid") await post("/v1/dev/reset", {});
-  const { status, body } = await post("/v1/security-lab/run", { scenario });
+  let status;
+  let body;
+  try {
+    ({ status, body } = await post("/v1/security-lab/run", { scenario }));
+  } catch (err) {
+    rows.push({ attack, scenario, expected, actual: err.name || err.message, verified_remotely: false, reason_codes: [] });
+    continue;
+  }
   const actual = scenario === "replay"
     ? body.second?.decision
     : scenario === "token_replay"

@@ -12,6 +12,6 @@ const server = http.createServer(handleAgentAuthRequest);
 server.listen(port, host, () => {
   console.log(`AgentAuth running at http://${host}:${port}`);
   if (!paymentConfig().available) {
-    console.log("Razorpay integration unavailable. Set Razorpay Test Mode credentials or explicit PAYMENT_PROVIDER=mock for local tests.");
+    console.log("Razorpay integration unavailable. Set Razorpay Test Mode credentials or explicit PAYMENT_PROVIDER=fixture for local tests.");
   }
 });

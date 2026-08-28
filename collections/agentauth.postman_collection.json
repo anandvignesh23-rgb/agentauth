@@ -1,0 +1,73 @@
+{
+  "info": {
+    "name": "AgentAuth Public API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "https://agentauth.vercel.app" },
+    { "key": "request_id", "value": "" },
+    { "key": "payment_token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": { "method": "GET", "url": "{{base_url}}/api/health" }
+    },
+    {
+      "name": "Happy Path Security Lab",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{base_url}}/v1/security-lab/run",
+        "body": { "mode": "raw", "raw": "{\"scenario\":\"valid\"}" }
+      }
+    },
+    {
+      "name": "Replay Attack",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{base_url}}/v1/security-lab/run",
+        "body": { "mode": "raw", "raw": "{\"scenario\":\"replay\"}" }
+      }
+    },
+    {
+      "name": "Tamper Amount",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{base_url}}/v1/security-lab/run",
+        "body": { "mode": "raw", "raw": "{\"scenario\":\"tamper_amount\"}" }
+      }
+    },
+    {
+      "name": "Step Up",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{base_url}}/v1/security-lab/run",
+        "body": { "mode": "raw", "raw": "{\"scenario\":\"high_risk\"}" }
+      }
+    },
+    {
+      "name": "Merchant Token Verification",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{base_url}}/v1/verify-payment-token",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"token\":\"{{payment_token}}\",\"merchant_id\":\"merchant_demo_electronics\",\"order_id\":\"ORD-1934\",\"amount\":499900,\"currency\":\"INR\"}"
+        }
+      }
+    },
+    {
+      "name": "Risk Snapshot",
+      "request": { "method": "GET", "url": "{{base_url}}/v1/risk/requests/{{request_id}}" }
+    },
+    {
+      "name": "Audit Export",
+      "request": { "method": "GET", "url": "{{base_url}}/v1/authorization-requests/{{request_id}}/audit/export" }
+    }
+  ]
+}

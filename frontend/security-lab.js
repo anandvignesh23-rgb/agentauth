@@ -22,7 +22,7 @@ function renderCheckoutAction() {
     target.innerHTML = latestRun ? `<div class="notice">Razorpay order created? NO</div>` : "";
     return;
   }
-  target.innerHTML = `<button id="payRazorpay">Pay in Razorpay Test Mode</button><span class="muted"> TEST MODE · NO REAL MONEY</span>`;
+  target.innerHTML = `<button id="payRazorpay">Verify Payment Provider Boundary</button><span class="muted">Razorpay credentials unavailable means no external payment order is created</span>`;
   document.getElementById("payRazorpay").addEventListener("click", startRazorpay);
 }
 

@@ -1,0 +1,11 @@
+{
+  "id": "pay_fixture_doc_captured",
+  "entity": "payment",
+  "amount": 499900,
+  "currency": "INR",
+  "status": "captured",
+  "order_id": "order_fixture_doc_001",
+  "method": "card",
+  "captured": true,
+  "description": "AgentAuth provider contract fixture"
+}

@@ -46,7 +46,7 @@ async function rawBody(req) {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-function metrics() {
+function metrics(store) {
   const decisions = store.all("decisions");
   const denied = decisions.filter((d) => d.decision === "DENY");
   return {
@@ -66,7 +66,7 @@ function metrics() {
 }
 
 function serveStatic(req, res) {
-  const urlPath = req.url === "/" ? "/index.html" : req.url === "/security-lab" ? "/security-lab.html" : req.url;
+  const urlPath = req.url === "/" ? "/index.html" : req.url === "/security-lab" ? "/security-lab.html" : req.url === "/evidence" ? "/evidence.html" : req.url;
   const file = path.join(root, "frontend", path.normalize(urlPath));
   if (!file.startsWith(path.join(root, "frontend")) || !fs.existsSync(file)) return false;
   const type = file.endsWith(".css") ? "text/css" : file.endsWith(".js") ? "text/javascript" : "text/html";
@@ -102,9 +102,15 @@ export async function handleAgentAuthRequest(req, res) {
         "/v1/agents": { get: { summary: "List agents" }, post: { summary: "Register agent" } },
         "/v1/delegations": { get: { summary: "List delegations" }, post: { summary: "Create delegation" } },
         "/v1/authorize-payment": { post: { summary: "Authorize signed agent payment request" } },
+        "/v1/authorization-requests/{request_id}/approve": { post: { summary: "Approve step-up challenge" } },
+        "/v1/authorization-requests/{request_id}/audit/export": { get: { summary: "Export authorization audit bundle" } },
         "/v1/verify-payment-token": { post: { summary: "Verify AgentAuth payment token" } },
         "/v1/risk/requests/{request_id}": { get: { summary: "Get risk snapshot" } },
-        "/v1/dashboard": { get: { summary: "Dashboard payload" } }
+        "/v1/audit": { get: { summary: "Recent audit events" } },
+        "/v1/dashboard": { get: { summary: "Dashboard payload" } },
+        "/v1/payments/create-order": { post: { summary: "Create provider order after AgentAuth token reservation" } },
+        "/v1/payments/verify": { post: { summary: "Verify provider checkout callback" } },
+        "/webhooks/razorpay": { post: { summary: "Verify raw provider webhook and update payment state" } }
       }
     });
     if (req.method === "GET" && p === "/docs") {
@@ -319,34 +325,36 @@ export async function handleAgentAuthRequest(req, res) {
         return json(res, 400, { error: "RAZORPAY_WEBHOOK_SIGNATURE_INVALID" });
       }
       const payload = JSON.parse(text);
-      const external_event_id = payload.id || hmacHex(process.env.RAZORPAY_WEBHOOK_SECRET, text);
-      const existing = store.find("webhookEvents", (e) => e.provider === "razorpay" && e.external_event_id === external_event_id);
+      const normalized = provider.normalizeWebhookEvent(payload);
+      const external_event_id = normalized.external_event_id || hmacHex("provider-event", text);
+      const providerName = normalized.provider || "razorpay";
+      const existing = store.find("webhookEvents", (e) => e.provider === providerName && e.external_event_id === external_event_id);
       if (existing) {
-        store.audit(null, "RAZORPAY_WEBHOOK_DUPLICATE", "RAZORPAY", "Duplicate Razorpay webhook ignored.", { external_event_id });
+        store.audit(null, "PROVIDER_WEBHOOK_DUPLICATE", providerName.toUpperCase(), "Duplicate provider webhook ignored.", { external_event_id });
         await store.save();
         return json(res, 200, { ok: true, duplicate: true, event_id: existing.id });
       }
       const event = store.insert("webhookEvents", {
         id: store.all("webhookEvents").length + 1,
-        provider: "razorpay",
+        provider: providerName,
         external_event_id,
-        event_type: payload.event,
+        event_type: normalized.event_type,
         payload_hash: hmacHex("payload", text),
         received_at: new Date().toISOString(),
         processed_at: null,
         status: "RECEIVED"
       });
-      store.audit(null, "RAZORPAY_WEBHOOK_RECEIVED", "RAZORPAY", `Razorpay webhook ${payload.event} received.`, { external_event_id });
-      store.audit(null, "RAZORPAY_WEBHOOK_VERIFIED", "RAZORPAY", `Razorpay webhook ${payload.event} signature verified.`, { external_event_id });
-      const orderId = payload.payload?.payment?.entity?.order_id || payload.payload?.order?.entity?.id;
-      const execution = store.find("paymentExecutions", (e) => e.razorpay_order_id === orderId);
+      store.audit(null, "PROVIDER_WEBHOOK_RECEIVED", providerName.toUpperCase(), `Provider webhook ${normalized.event_type} received.`, { external_event_id });
+      store.audit(null, "PROVIDER_WEBHOOK_VERIFIED", providerName.toUpperCase(), `Provider webhook ${normalized.event_type} signature verified.`, { external_event_id });
+      const execution = store.find("paymentExecutions", (e) => e.razorpay_order_id === normalized.order_id);
       if (execution) {
-        const paymentEntity = payload.payload?.payment?.entity;
-        if (paymentEntity?.id) execution.razorpay_payment_id = paymentEntity.id;
-        if (payload.event === "payment.authorized") {
+        if (normalized.payment_id) execution.razorpay_payment_id = normalized.payment_id;
+        execution.provider_payment = normalized;
+        execution.provider_verified_at = new Date().toISOString();
+        if (normalized.event_type === "payment.authorized") {
           execution.status = "AUTHORIZED";
         }
-        if (payload.event === "payment.captured" || payload.event === "order.paid") {
+        if (normalized.event_type === "payment.captured" || normalized.event_type === "order.paid") {
           execution.status = "CAPTURED";
           execution.paid_at = new Date().toISOString();
           const merchantOrder = store.find("merchantOrders", (o) => o.merchant_id === execution.merchant_id && o.external_order_id === execution.order_id);
@@ -357,14 +365,14 @@ export async function handleAgentAuthRequest(req, res) {
             await store.persistRecord?.("merchantOrders", merchantOrder);
             store.audit(execution.authorization_request_id, "MERCHANT_ORDER_PAID", "AGENTAUTH", `Merchant order ${merchantOrder.external_order_id} marked PAID.`, { execution_id: execution.execution_id });
           }
-          store.audit(execution.authorization_request_id, "PAYMENT_CAPTURED", "RAZORPAY", `Payment execution ${execution.execution_id} captured by webhook.`, { external_event_id });
+          store.audit(execution.authorization_request_id, "PAYMENT_CAPTURED", providerName.toUpperCase(), `Payment execution ${execution.execution_id} captured by webhook.`, { external_event_id });
         }
-        if (payload.event === "payment.failed") {
+        if (normalized.event_type === "payment.failed") {
           execution.status = "FAILED";
           execution.failed_at = new Date().toISOString();
-          store.audit(execution.authorization_request_id, "PAYMENT_FAILED", "RAZORPAY", `Payment execution ${execution.execution_id} failed by webhook.`, { external_event_id });
+          store.audit(execution.authorization_request_id, "PAYMENT_FAILED", providerName.toUpperCase(), `Payment execution ${execution.execution_id} failed by webhook.`, { external_event_id });
         }
-        store.audit(execution.authorization_request_id, "RAZORPAY_WEBHOOK_PROCESSED", "RAZORPAY", `Webhook ${payload.event} processed.`, { external_event_id });
+        store.audit(execution.authorization_request_id, "PROVIDER_WEBHOOK_PROCESSED", providerName.toUpperCase(), `Webhook ${normalized.event_type} processed.`, { external_event_id });
         await store.persistRecord?.("paymentExecutions", execution);
       }
       event.status = "PROCESSED";
@@ -449,7 +457,21 @@ export async function handleAgentAuthRequest(req, res) {
       if (data.scenario === "tamper_merchant") sent.merchant_id = "merchant_malicious_electronics";
       if (data.scenario === "amount_attack") signed = sent = { ...base, amount: 4999900 };
       if (data.scenario === "merchant_attack") signed = sent = { ...base, merchant_id: "merchant_malicious_electronics" };
+      if (data.scenario === "order_attack") signed = sent = { ...base, order_id: "ORD-ATTACK" };
       if (data.scenario === "expired_delegation") signed = sent = { ...base, delegation_id: "del_expired", order_id: "ORD-OLD" };
+      if (data.scenario === "revoked_delegation") {
+        const delegation = createScenarioDelegation({ merchant_id: base.merchant_id, order_id: id("ORD"), amount: base.amount });
+        delegation.status = "REVOKED";
+        delegation.revoked_at = new Date().toISOString();
+        await store.persistRecord?.("delegations", delegation);
+        signed = sent = { ...base, delegation_id: delegation.delegation_id, order_id: delegation.order_id };
+      }
+      if (data.scenario === "revoked_agent") {
+        const agent = store.find("agents", (a) => a.agent_id === "agent_7F92A");
+        agent.status = "REVOKED";
+        agent.revoked_at = new Date().toISOString();
+        await store.persistRecord?.("agents", agent);
+      }
       if (data.scenario === "high_risk") signed = sent = { ...base, delegation_id: "del_highrisk", merchant_id: "merchant_new_luxury", order_id: "ORD-40000", amount: 4000000 };
       if (data.scenario === "prompt_injection") signed = sent = { ...base, merchant_id: "merchant_malicious_electronics", amount: 4999900 };
       if (data.scenario === "high_value_anomaly" || data.scenario === "new_merchant_anomaly") signed = sent = { ...base, delegation_id: "del_highrisk", merchant_id: "merchant_new_luxury", order_id: "ORD-40000", amount: 4000000 };
@@ -492,6 +514,12 @@ export async function handleAgentAuthRequest(req, res) {
       if (data.scenario === "replay") {
         const second = await authorizePayment({ store, tokenSecret, payload: sent, signature, headerAgentId: sent.agent_id });
         return json(res, 200, { canonical: canonicalize(signed), first, second });
+      }
+      if (data.scenario === "token_replay" && first.payment_authorization?.token_id) {
+        const first_reserve = await store.reservePaymentToken(first.payment_authorization.token_id);
+        const second_reserve = await store.reservePaymentToken(first.payment_authorization.token_id);
+        await store.save();
+        return json(res, 200, { canonical: canonicalize(signed), result: first, token_replay: { first_reserve, second_reserve, expected_second_reason: "PAYMENT_TOKEN_ALREADY_USED" } });
       }
       return json(res, 200, { canonical: canonicalize(signed), result: first });
     }
@@ -536,7 +564,7 @@ export async function handleAgentAuthRequest(req, res) {
       const snapshots = store.all("transactionRiskSnapshots");
       return json(res, 200, {
         metrics: {
-          ...metrics(),
+          ...metrics(store),
           fraud_alerts_today: store.all("fraudSignalEvents").filter((e) => e.severity === "HIGH" || e.severity === "CRITICAL").length,
           amount_anomalies: snapshots.filter((s) => s.transaction_reason_codes.includes("UNUSUAL_AMOUNT") || s.transaction_reason_codes.includes("EXTREME_AMOUNT_ANOMALY")).length,
           velocity_anomalies: snapshots.filter((s) => s.transaction_reason_codes.includes("HIGH_VELOCITY") || s.agent_reason_codes.includes("AGENT_HIGH_VELOCITY")).length,

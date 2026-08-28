@@ -1,0 +1,15 @@
+{
+  "id": "order_fixture_doc_001",
+  "entity": "order",
+  "amount": 499900,
+  "amount_paid": 0,
+  "amount_due": 499900,
+  "currency": "INR",
+  "receipt": "ORD-1934",
+  "status": "created",
+  "attempts": 0,
+  "notes": {
+    "agentauth_fixture": "documented Razorpay order shape"
+  },
+  "created_at": 1787554880
+}

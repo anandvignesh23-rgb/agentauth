@@ -8,7 +8,7 @@ import test from "node:test";
 
 process.env.ENVIRONMENT = "test";
 process.env.NODE_ENV = "test";
-process.env.PAYMENT_PROVIDER = "mock";
+process.env.PAYMENT_PROVIDER = "fixture";
 process.env.JWT_SECRET = "test-secret";
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "agentauth-http-"));
 
@@ -39,7 +39,7 @@ async function request(baseUrl, path, { method = "GET", body, headers = {} } = {
   return { status: res.status, body: text ? JSON.parse(text) : {} };
 }
 
-test("payment order route returns checkout-safe minor-unit Razorpay payload exactly once", async () => {
+test("payment order route returns checkout-safe minor-unit fixture provider payload exactly once", async () => {
   await withServer(async (baseUrl) => {
     await request(baseUrl, "/v1/dev/reset", { method: "POST" });
     const lab = await request(baseUrl, "/v1/security-lab/run", { method: "POST", body: { scenario: "valid" } });
@@ -53,8 +53,9 @@ test("payment order route returns checkout-safe minor-unit Razorpay payload exac
     });
     assert.equal(first.status, 200);
     assert.equal(first.body.checkout.amount, 499900);
-    assert.equal(first.body.checkout.razorpay_order_id.startsWith("order_mock_"), true);
-    assert.equal(first.body.checkout.key_id, "rzp_test_mock");
+    assert.equal(first.body.checkout.razorpay_order_id.startsWith("order_fixture_"), true);
+    assert.equal(first.body.checkout.key_id, "fixture_provider_contract");
+    assert.equal(first.body.checkout.simulation_notice, "Provider contract simulation - no external payment processor call");
     assert.equal(first.body.execution.status, "ORDER_CREATED");
 
     const second = await request(baseUrl, "/v1/payments/create-order", {
@@ -64,6 +65,18 @@ test("payment order route returns checkout-safe minor-unit Razorpay payload exac
     assert.equal(second.status, 200);
     assert.equal(second.body.idempotent, true);
     assert.equal(second.body.execution.execution_id, first.body.execution.execution_id);
+  });
+});
+
+test("dashboard and evidence routes are live without payment credentials", async () => {
+  await withServer(async (baseUrl) => {
+    await request(baseUrl, "/v1/dev/reset", { method: "POST" });
+    const dashboard = await request(baseUrl, "/v1/dashboard");
+    assert.equal(dashboard.status, 200);
+    assert.equal(dashboard.body.payment_config.provider, "fixture");
+    const evidence = await fetch(`${baseUrl}/evidence`);
+    assert.equal(evidence.status, 200);
+    assert.equal((await evidence.text()).includes("AgentAuth Evidence"), true);
   });
 });
 
@@ -88,7 +101,7 @@ test("checkout verification rejects tampered signatures and accepts provider-ver
     const paymentId = "pay_mock_good";
     const good = await request(baseUrl, "/v1/payments/verify", {
       method: "POST",
-      body: { razorpay_order_id: razorpayOrderId, razorpay_payment_id: paymentId, razorpay_signature: hmac("mock-secret", `${razorpayOrderId}|${paymentId}`) }
+      body: { razorpay_order_id: razorpayOrderId, razorpay_payment_id: paymentId, razorpay_signature: hmac("fixture-checkout-secret", `${razorpayOrderId}|${paymentId}`) }
     });
     assert.equal(good.status, 200);
     assert.equal(good.body.valid, true);
@@ -111,7 +124,7 @@ test("webhook verification rejects fake signatures and deduplicates valid captur
       payload: {
         payment: {
           entity: {
-            id: "pay_mock_webhook",
+            id: "pay_fixture_webhook",
             order_id: created.body.checkout.razorpay_order_id,
             amount: 499900,
             currency: "INR",
@@ -124,7 +137,7 @@ test("webhook verification rejects fake signatures and deduplicates valid captur
     const fake = await fetch(`${baseUrl}/webhooks/razorpay`, { method: "POST", headers: { "x-razorpay-signature": "fake" }, body: text });
     assert.equal(fake.status, 400);
 
-    const signature = hmac("mock-webhook-secret", text);
+    const signature = hmac("fixture-webhook-secret", text);
     const first = await fetch(`${baseUrl}/webhooks/razorpay`, { method: "POST", headers: { "x-razorpay-signature": signature }, body: text });
     assert.equal(first.status, 200);
     assert.equal((await first.json()).ok, true);

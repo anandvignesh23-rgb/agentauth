@@ -1,6 +1,6 @@
 # AgentAuth
 
-AgentAuth is a working delegated-authorization gateway for agentic commerce. AI agents cryptographically identify themselves, consumers grant transaction-scoped authority, AgentAuth independently validates every payment request against that authority, and approved requests receive one-time authorization tokens that merchants can verify before executing payments through Razorpay Test Mode.
+AgentAuth is a working cryptographic authorization and risk gateway for AI-agent payments. AI agents cryptographically identify themselves, consumers grant transaction-scoped authority, AgentAuth independently validates every payment request against that authority, and approved requests receive one-time authorization tokens that merchants can verify before payment execution.
 
 The important property: the AI agent never controls its own financial permissions. Even if it is hallucinating, compromised, prompt-injected, or malicious, AgentAuth prevents it from exceeding the authority granted by the consumer.
 
@@ -24,7 +24,9 @@ flowchart LR
   Gateway --> Policy["Policy Engine"]
   Policy --> Token["Token Service"]
   Token --> Merchant["Merchant"]
-  Merchant --> Razorpay["Razorpay Test Mode"]
+  Merchant --> Provider["PaymentProvider"]
+  Provider --> Razorpay["Razorpay Adapter"]
+  Provider --> Fixture["Fixture Provider"]
   Razorpay --> Webhook["Webhook / Reconciliation"]
   Webhook --> Audit["Audit"]
 ```
@@ -35,16 +37,16 @@ sequenceDiagram
   participant Agent
   participant AgentAuth
   participant Merchant
-  participant Razorpay
+  participant Provider as PaymentProvider
   User->>AgentAuth: Create transaction-scoped delegation
   Agent->>AgentAuth: Signed payment request
   AgentAuth-->>Agent: ALLOW + one-time token or DENY / STEP_UP
   Agent->>Merchant: AgentAuth token
   Merchant->>AgentAuth: Verify token bindings
   Merchant->>AgentAuth: Start payment execution
-  AgentAuth->>Razorpay: Create Test Mode order
-  Razorpay-->>AgentAuth: Razorpay order id
-  Razorpay->>AgentAuth: Verified webhook
+  AgentAuth->>Provider: Create provider order
+  Provider-->>AgentAuth: Provider order id or credential-gated error
+  Provider->>AgentAuth: Verified webhook
   AgentAuth->>Audit: Final lifecycle record
 ```
 
@@ -76,7 +78,7 @@ Public backend URL: https://agentauth.vercel.app
 
 Health URL: https://agentauth.vercel.app/api/health, with compatibility rewrite at `https://agentauth.vercel.app/health`.
 
-Razorpay integration: implemented for Test Mode, blocked on live remote verification until test credentials are configured.
+Razorpay sandbox verification is currently blocked by merchant-account credential access. The Razorpay adapter, order contract, checkout signature verification, webhook signature verification, idempotency, and reconciliation paths are implemented and tested against documented signed fixtures. The AgentAuth authorization and security layers are fully deployed and live.
 
 Persistence: Supabase PostgreSQL in production, with JSON retained only for local explicit demo/test mode.
 
@@ -89,6 +91,10 @@ Deployment docs:
 - `docs/vercel-migration-audit.md`
 - `docs/razorpay-integration-audit.md`
 - `docs/razorpay-setup.md`
+- `docs/legitimacy-audit.md`
+- `docs/security-proof.md`
+- `docs/concurrency-proof.md`
+- `docs/payment-provider-status.md`
 
 Public smoke test:
 
@@ -107,14 +113,14 @@ Seed data creates:
 - amount: `INR 499900` minor units, equal to INR 4,999.00
 - demo private key: `data/demo-agent-private.pem`
 
-The UI clearly labels Razorpay Test Mode. No real money is moved.
+The UI separates AgentAuth security evidence from the Razorpay credential-gated payment boundary. No real money is moved.
 
 ## 5-Minute Demo Steps
 
 1. Show the consumer dashboard and active delegation for Shopping Copilot.
 2. Run a valid signed request and show `VALID_SIGNATURE`, `DELEGATION_VALID`, `LOW_RISK`, and `ALLOW`.
 3. Show merchant token verification checks: signature, issuer, expiry, merchant, order, amount, one-time status.
-4. With Razorpay credentials configured, start payment execution and receive a real Razorpay Test Mode order id.
+4. Verify the payment-provider boundary: without Razorpay credentials, production returns `RAZORPAY_NOT_CONFIGURED` instead of a fake order.
 5. Use Security Lab for amount escalation, merchant substitution, tampering, replay, expired delegation, invalid signature, prompt injection, and high-risk step-up.
 6. Use Security Lab fraud cases for high-value anomaly, velocity attack, merchant-spread spike, denial spike, recent key rotation, and compromised-agent burst.
 7. Open the audit timeline/export to show each authorization, fraud, agent-risk, and policy reason.
@@ -132,10 +138,10 @@ export RAZORPAY_KEY_SECRET=...
 export RAZORPAY_WEBHOOK_SECRET=...
 ```
 
-If these are missing, `/health` reports Razorpay unavailable and `/v1/payments/create-order` refuses to fake a Razorpay order. Mock mode is disabled in production. For local unit tests only, explicitly set:
+If these are missing, `/health` reports Razorpay unavailable and `/v1/payments/create-order` refuses to fake a Razorpay order. Fixture mode is disabled in production. For local unit tests only, explicitly set:
 
 ```bash
-export PAYMENT_PROVIDER=mock
+export PAYMENT_PROVIDER=fixture
 ```
 
 Run the credential-gated live Test Mode order check only after setting Razorpay Test Mode credentials:
@@ -222,6 +228,9 @@ npm test
 Covered locally:
 
 - valid Ed25519 signatures and fixture vectors
+- provider contract fixtures
+- checkout and webhook HMAC verification
+- raw-body webhook rejection
 - tampered amount, merchant, order, nonce, timestamp
 - nonce replay
 - delegation scope failures
@@ -236,4 +245,4 @@ Covered locally:
 
 ## Limitations
 
-AgentAuth does not provide legal KYC, replace a payment processor, store payment credentials, authorize bank debits directly, or move real money in Razorpay Test Mode. The current persistence layer is local JSON for demoability; production should use PostgreSQL transactions, row locks, unique constraints, migrations, and real RBAC.
+AgentAuth does not provide legal KYC, replace a payment processor, store payment credentials, authorize bank debits directly, or move real money in Razorpay Test Mode. Production uses Supabase/PostgreSQL for durable demo state; full consumer/developer/merchant RBAC is still outside this buildathon slice.

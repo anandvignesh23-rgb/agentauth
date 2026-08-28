@@ -9,19 +9,19 @@ export function paymentConfig() {
     provider,
     razorpayConfigured,
     webhookConfigured,
-    available: (provider === "mock" && !isProduction) || (provider === "razorpay" && razorpayConfigured)
+    available: ((provider === "fixture" || provider === "mock") && !isProduction) || (provider === "razorpay" && razorpayConfigured)
   };
 }
 
 export function getPaymentProvider() {
   const config = paymentConfig();
-  if (config.provider === "mock") {
+  if (config.provider === "fixture" || config.provider === "mock") {
     if ((process.env.ENVIRONMENT || process.env.NODE_ENV) === "production") {
-      const err = new Error("MOCK_PAYMENT_PROVIDER_DISABLED_IN_PRODUCTION");
+      const err = new Error("FIXTURE_PAYMENT_PROVIDER_DISABLED_IN_PRODUCTION");
       err.status = 500;
       throw err;
     }
-    return new MockPaymentProvider();
+    return new FixturePaymentProvider();
   }
   if (config.provider === "razorpay") return new RazorpayTestProvider();
   throw new Error(`Unsupported PAYMENT_PROVIDER=${config.provider}`);
@@ -116,38 +116,83 @@ export class RazorpayTestProvider {
     const expected = hmacHex(process.env.RAZORPAY_WEBHOOK_SECRET, body);
     return timingSafeEqualText(signature, expected);
   }
+
+  normalizeWebhookEvent(payload) {
+    const payment = payload?.payload?.payment?.entity;
+    const order = payload?.payload?.order?.entity;
+    return {
+      provider: "razorpay",
+      external_event_id: payload?.id || null,
+      event_type: payload?.event || "unknown",
+      order_id: payment?.order_id || order?.id || null,
+      payment_id: payment?.id || null,
+      amount: payment?.amount ?? order?.amount ?? null,
+      currency: payment?.currency || order?.currency || null,
+      status: payment?.status || order?.status || null,
+      raw: payload
+    };
+  }
 }
 
-export class MockPaymentProvider {
+export class FixturePaymentProvider {
+  constructor({ mode = process.env.FIXTURE_PAYMENT_MODE || "SUCCESS" } = {}) {
+    this.mode = mode;
+  }
+
   async createOrder({ amount, currency, receipt }) {
     const minorAmount = assertMinorUnitAmount(amount);
+    if (this.mode === "FAIL") {
+      const err = new Error("FIXTURE_PAYMENT_FAILED");
+      err.status = 402;
+      throw err;
+    }
     return {
-      id: id("order_mock"),
+      id: id("order_fixture"),
       entity: "order",
       amount: minorAmount,
       amount_due: minorAmount,
       amount_paid: 0,
       currency,
       receipt,
-      status: "created",
-      mock: true
+      status: this.mode === "PENDING" ? "created" : "paid",
+      fixture: true,
+      simulation_notice: "Provider contract simulation - no external payment processor call"
     };
   }
 
   async fetchOrder(orderId) {
-    return { id: orderId, status: "created", mock: true };
+    return { id: orderId, status: this.mode === "PENDING" ? "created" : "paid", fixture: true };
   }
 
   async fetchPayment(paymentId) {
-    return { id: paymentId, status: "captured", amount: null, currency: null, mock: true };
+    if (this.mode === "FAIL") return { id: paymentId, status: "failed", amount: null, currency: null, fixture: true };
+    return { id: paymentId, status: this.mode === "PENDING" ? "authorized" : "captured", amount: null, currency: null, fixture: true };
   }
 
   verifyCheckoutSignature({ orderId, paymentId, signature }) {
-    return signature === hmacHex("mock-secret", `${orderId}|${paymentId}`);
+    return timingSafeEqualText(signature, hmacHex(process.env.FIXTURE_CHECKOUT_SECRET || "fixture-checkout-secret", `${orderId}|${paymentId}`));
   }
 
   verifyWebhookSignature({ body, signature }) {
-    const expected = hmacHex("mock-webhook-secret", body);
-    return signature === expected;
+    const expected = hmacHex(process.env.FIXTURE_WEBHOOK_SECRET || "fixture-webhook-secret", body);
+    return timingSafeEqualText(signature, expected);
+  }
+
+  normalizeWebhookEvent(payload) {
+    const payment = payload?.payload?.payment?.entity;
+    const order = payload?.payload?.order?.entity;
+    return {
+      provider: "fixture",
+      external_event_id: payload?.id || hmacHex("fixture-event", JSON.stringify(payload)),
+      event_type: payload?.event || "unknown",
+      order_id: payment?.order_id || order?.id || null,
+      payment_id: payment?.id || null,
+      amount: payment?.amount ?? order?.amount ?? null,
+      currency: payment?.currency || order?.currency || null,
+      status: payment?.status || order?.status || null,
+      raw: payload
+    };
   }
 }
+
+export const MockPaymentProvider = FixturePaymentProvider;

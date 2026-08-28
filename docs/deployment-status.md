@@ -14,10 +14,13 @@
 | Agent-aware risk | REAL | Deterministic behavior scoring and profiles. |
 | Step-up | REAL | Step-up challenge approval flow works. |
 | Audit history | REAL | Hash-chained audit events. |
+| Agent SDK | REAL | `sdk/js/agentauth.mjs` signs and submits requests, supports polling. |
+| Merchant SDK | REAL | `MerchantAgentAuthClient` verifies payment tokens and starts provider order creation. |
 | Production bind | REAL | Local wrapper uses host/port; Vercel uses serverless function handlers. |
 | CORS | REAL | Restrictive env-driven origin, no wildcard production default. |
 | Secret safety | REAL | `.env`, `.env.*`, data keys, and JSON store are ignored. |
 | Razorpay Test API | BLOCKED_BY_CREDENTIALS | Integration code is implemented; live order creation needs Vercel `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`. |
+| Fixture provider | FIXTURE_TESTED | Explicit local/test provider contract simulation; disabled in production. |
 | PostgreSQL | LIVE | Supabase project `qusdfmrpujmvsqeqxwom`; Vercel production uses the pooled `DATABASE_URL`. |
 | Public smoke test script | REAL | `scripts/smoke_test_public_backend.py`. |
 | Clean deploy config | READY | `vercel.json`, `api/[...path].js`, reusable app handler, Supabase migration. |
@@ -144,6 +147,7 @@ Result: rows are present for the public smoke authorization flow in Supabase Pos
 | Capability | Status |
 | --- | --- |
 | Provider abstraction | REAL |
+| Fixture provider | FIXTURE_TESTED |
 | Razorpay Test provider | REAL WHEN CONFIGURED |
 | Order creation route | REAL WHEN CONFIGURED |
 | Razorpay Checkout UI handoff | REAL WHEN CONFIGURED |
@@ -154,3 +158,12 @@ Result: rows are present for the public smoke authorization flow in Supabase Pos
 | Live Mode | NOT IMPLEMENTED |
 | Remote real Test Mode order | BLOCKED_BY_CREDENTIALS |
 | Remote Test Mode checkout/payment/webhook | BLOCKED_BY_CREDENTIALS |
+
+## Security Test Count
+
+| Suite | Count |
+| --- | ---: |
+| Unit / integration tests | 26 |
+| Attack scenarios exposed through Security Lab | 20 |
+| Provider contract tests | 6 |
+| Concurrency proof scenarios | 4 |

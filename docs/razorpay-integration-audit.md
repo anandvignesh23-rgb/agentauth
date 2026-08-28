@@ -8,7 +8,7 @@ Search terms reviewed: `razorpay`, `rzp_`, `order_id`, `payment_id`, `webhook`, 
 | --- | --- | --- |
 | Payment provider abstraction | REAL | `backend/payments/provider.js` exposes create/fetch order, fetch payment, checkout signature verification, and webhook signature verification. |
 | Razorpay provider adapter | REAL | `RazorpayTestProvider` calls Razorpay Test Mode REST APIs with server-side Basic Auth. |
-| Mock payment provider | MOCKED | Kept only for tests/local explicit `PAYMENT_PROVIDER=mock`; disabled in production. |
+| Fixture payment provider | FIXTURE_TESTED | Kept only for tests/local explicit `PAYMENT_PROVIDER=fixture`; disabled in production. |
 | Razorpay order creation | REAL WHEN CONFIGURED | `POST /v1/payments/create-order` calls Razorpay only after token, merchant, order, amount, currency, and ALLOW checks pass. |
 | Amount handling | REAL | AgentAuth, merchant order, and Razorpay order amounts use integer minor units. INR 4,999.00 is `499900`. |
 | Checkout payload | REAL WHEN CONFIGURED | Response includes frontend-safe `key_id`, `razorpay_order_id`, amount, currency, merchant display name, and test-mode marker. Secrets are not returned. |
@@ -25,8 +25,8 @@ Search terms reviewed: `razorpay`, `rzp_`, `order_id`, `payment_id`, `webhook`, 
 | DENY/STEP_UP isolation | REAL | Razorpay is only reached through payment-token execution after an ALLOW-issued token exists. |
 | Audit events | REAL | Order creation, checkout verification, webhook receipt/verification/dedupe, payment capture/failure, reconciliation, and merchant paid events are audited. |
 | Environment configuration | PARTIAL | Variables are supported and documented; live Vercel Razorpay secrets have not been provided yet. |
-| Remote live Test Mode order | MISSING | Blocked by missing `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`. |
-| Remote live webhook verification | MISSING | Blocked by missing Razorpay dashboard webhook secret and a completed Test Mode payment. |
+| Remote live Test Mode order | BLOCKED_BY_CREDENTIALS | Blocked by missing `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`. |
+| Remote live webhook verification | BLOCKED_BY_CREDENTIALS | Blocked by missing Razorpay dashboard webhook secret and a completed Test Mode payment. |
 
 ## Boundary
 

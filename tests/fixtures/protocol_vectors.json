@@ -1,0 +1,23 @@
+{
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIOptATLens2wtIkre1X/B31wZHgYN+NrSmf6qpo6tkM5\n-----END PRIVATE KEY-----\n",
+  "public_key": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAr5zo9Xg9/X9/Nvaj72iU/y48GXIjEoMZF0AIercVk7Y=\n-----END PUBLIC KEY-----\n",
+  "payload": {
+    "agent_id": "agent_7F92A",
+    "delegation_id": "del_9217",
+    "merchant_id": "merchant_demo_electronics",
+    "order_id": "ORD-1934",
+    "amount": 499900,
+    "currency": "INR",
+    "nonce": "vector_nonce_001",
+    "timestamp": "2026-08-24T10:31:20Z"
+  },
+  "canonical_message": "agent_id=agent_7F92A\ndelegation_id=del_9217\nmerchant_id=merchant_demo_electronics\norder_id=ORD-1934\namount=499900\ncurrency=INR\nnonce=vector_nonce_001\ntimestamp=2026-08-24T10:31:20Z",
+  "valid_signature": "+xNeyHKdhjNikR61WylmDye0Nv4BhGYfk38NTIMVZTCgqLsFIS6a6LWMOH1e2/gcMVbTYLUKu9Ai8amEdR9wDQ==",
+  "tampered_variants": [
+    { "name": "tampered amount", "field": "amount", "value": 999900 },
+    { "name": "tampered merchant", "field": "merchant_id", "value": "merchant_malicious_electronics" },
+    { "name": "tampered order", "field": "order_id", "value": "ORD-OTHER" },
+    { "name": "tampered nonce", "field": "nonce", "value": "vector_nonce_002" },
+    { "name": "expired/changed timestamp", "field": "timestamp", "value": "2026-08-24T10:32:20Z" }
+  ]
+}

@@ -113,12 +113,14 @@ export async function createPaymentExecution({ store, tokenSecret, token, expect
       ok: true,
       execution,
       checkout: {
-        key_id: process.env.PAYMENT_PROVIDER === "mock" ? "rzp_test_mock" : process.env.RAZORPAY_KEY_ID,
+        key_id: process.env.PAYMENT_PROVIDER === "fixture" || process.env.PAYMENT_PROVIDER === "mock" ? "fixture_provider_contract" : process.env.RAZORPAY_KEY_ID,
         razorpay_order_id: providerOrder.id,
         amount: providerOrder.amount,
         currency: tokenRecord.currency,
         merchant_display_name: merchantOrder.merchant_name || tokenRecord.merchant_id,
-        test_mode: true
+        provider: process.env.PAYMENT_PROVIDER || "razorpay",
+        test_mode: process.env.PAYMENT_PROVIDER !== "fixture",
+        simulation_notice: providerOrder.simulation_notice || null
       }
     };
   } catch (err) {

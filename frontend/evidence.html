@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AgentAuth Evidence</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <p class="eyebrow">Verification evidence</p>
+        <h1>AgentAuth Evidence</h1>
+        <p class="mode">Cryptographic authorization and risk gateway for AI-agent payments. Razorpay sandbox access is the only credential-gated boundary.</p>
+      </div>
+      <nav>
+        <a href="/">Dashboard</a>
+        <a href="/security-lab">Security Lab</a>
+      </nav>
+    </header>
+    <main>
+      <section class="split">
+        <div>
+          <h2>Live System</h2>
+          <div class="grid">
+            <div class="row"><strong>Production API</strong><code>https://agentauth.vercel.app</code></div>
+            <div class="row"><strong>Health</strong><code>/api/health</code></div>
+            <div class="row"><strong>Public docs</strong><code>/openapi.json</code></div>
+            <div class="row"><strong>Security lab</strong><code>/security-lab</code></div>
+          </div>
+        </div>
+        <div>
+          <h2>Boundary</h2>
+          <div class="card">
+            <strong>Razorpay sandbox call: BLOCKED_BY_CREDENTIALS</strong>
+            <p class="muted">The Razorpay adapter, signatures, webhook verification, dedupe, and reconciliation paths are implemented and fixture-tested. Production refuses to create a fake Razorpay order when keys are absent.</p>
+          </div>
+        </div>
+      </section>
+      <section>
+        <h2>Proof Artifacts</h2>
+        <div class="grid">
+          <div class="row"><strong>Legitimacy audit</strong><code>docs/legitimacy-audit.md</code></div>
+          <div class="row"><strong>Persistence proof</strong><code>docs/persistence-proof.md</code></div>
+          <div class="row"><strong>Security proof</strong><code>docs/security-proof.md</code></div>
+          <div class="row"><strong>Concurrency proof</strong><code>docs/concurrency-proof.md</code></div>
+          <div class="row"><strong>Provider status</strong><code>docs/payment-provider-status.md</code></div>
+          <div class="row"><strong>Protocol vectors</strong><code>tests/fixtures/protocol_vectors.json</code></div>
+          <div class="row"><strong>Provider contract tests</strong><code>tests/provider-contract.test.mjs</code></div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

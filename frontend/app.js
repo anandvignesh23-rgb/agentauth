@@ -24,7 +24,7 @@ async function render() {
   $("delegations").innerHTML = `<h2>Active Delegations</h2>` + data.delegations
     .map((d) => row(`${d.purpose || d.order_id}: ${d.currency} ${d.max_amount}`, `${d.delegation_id} · ${d.agent_id} · ${d.merchant_id} · signed credential ${d.delegation_credential ? "issued" : "missing"} · expires ${new Date(d.expires_at).toLocaleTimeString()}`, d.status))
     .join("");
-  $("paymentConfig").innerHTML = `<div class="card"><strong>RAZORPAY TEST MODE</strong><div class="muted">Provider ${data.payment_config.provider} · Razorpay configured ${data.payment_config.razorpayConfigured ? "yes" : "no"} · integration ${data.payment_config.available ? "available" : "unavailable"}</div></div>`;
+  $("paymentConfig").innerHTML = `<div class="card"><strong>Payment Provider Boundary</strong><div class="muted">Provider ${data.payment_config.provider} · Razorpay credentials ${data.payment_config.razorpayConfigured ? "configured" : "unavailable"} · external payment call ${data.payment_config.available ? "available" : "blocked"}</div></div>`;
   $("tokens").innerHTML = data.tokens.length
     ? `<h2>AgentAuth Tokens</h2>` + data.tokens.map((t) => row(`${t.currency} ${t.amount} · ${t.order_id}`, `${t.token_id} · ${t.merchant_id} · ${t.status || "ACTIVE"}`, t.status || "PENDING")).join("")
     : `<div class="card muted">Run <code>npm run demo</code> to create an incoming authorized agent payment.</div>`;

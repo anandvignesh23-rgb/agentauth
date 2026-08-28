@@ -57,7 +57,7 @@ function auth(ctx, p, sig = signPayload(ctx.privateKeyPem, p)) {
 }
 
 test("allows a valid transaction and starts one exactly-once payment execution", async () => {
-  process.env.PAYMENT_PROVIDER = "mock";
+  process.env.PAYMENT_PROVIDER = "fixture";
   const ctx = fixture();
   const result = await auth(ctx, payload());
   assert.equal(result.decision, "ALLOW");
@@ -169,7 +169,7 @@ test("published signature fixture validates and all tampered variants fail", () 
 });
 
 test("100 simultaneous token consume requests reserve one token execution", async () => {
-  process.env.PAYMENT_PROVIDER = "mock";
+  process.env.PAYMENT_PROVIDER = "fixture";
   const ctx = fixture();
   const result = await auth(ctx, payload());
   const expected = { merchant_id: "merchant_demo_electronics", order_id: "ORD-1934", amount: 499900, currency: "INR" };

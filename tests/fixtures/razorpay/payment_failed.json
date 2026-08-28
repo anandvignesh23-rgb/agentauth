@@ -1,0 +1,12 @@
+{
+  "id": "pay_fixture_doc_failed",
+  "entity": "payment",
+  "amount": 499900,
+  "currency": "INR",
+  "status": "failed",
+  "order_id": "order_fixture_doc_001",
+  "method": "card",
+  "captured": false,
+  "error_code": "BAD_REQUEST_ERROR",
+  "error_description": "Fixture payment failure"
+}

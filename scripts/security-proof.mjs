@@ -16,11 +16,15 @@ const scenarios = [
 ];
 
 async function post(path, body) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), Number(process.env.AGENTAUTH_PROOF_TIMEOUT_MS || 30000));
   const res = await fetch(`${baseUrl}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    signal: controller.signal
   });
+  clearTimeout(timeout);
   const text = await res.text();
   return { status: res.status, body: text ? JSON.parse(text) : {} };
 }

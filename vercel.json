@@ -19,6 +19,10 @@
       "destination": "/api/docs"
     },
     {
+      "source": "/evidence",
+      "destination": "/api/evidence"
+    },
+    {
       "source": "/v1/(.*)",
       "destination": "/api"
     },

@@ -52,7 +52,7 @@ https://agentauth.vercel.app
 
 Immutable deployment URLs change on every redeploy. Use the production alias above for verification.
 
-Latest production commit: `b6c4f98` (`Fix Vercel frontend deep links`), including frontend console commit `8ffd827`.
+Verified frontend deployment commits: `8ffd827` (`Build AgentAuth frontend console`) and `b6c4f98` (`Fix Vercel frontend deep links`).
 
 ## Verification Completed Locally
 

@@ -17,7 +17,9 @@
     "merchant-demo": "node examples/demo_merchant.mjs",
     "proof:security": "node scripts/security-proof.mjs",
     "proof:concurrency": "node scripts/concurrency-proof.mjs",
-    "lint": "node --check backend/app.js && node --check backend/payments/provider.js && node --check sdk/js/agentauth.mjs",
+    "lint": "node --check backend/app.js && node --check backend/payments/provider.js && node --check sdk/js/agentauth.mjs && node --check frontend/app.js",
+    "typecheck": "npm run lint",
+    "build": "npm run lint",
     "test": "node --test tests/*.test.mjs",
     "test:razorpay": "node tests/razorpay-live.mjs"
   },

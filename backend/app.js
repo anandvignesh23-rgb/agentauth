@@ -66,11 +66,36 @@ function metrics(store) {
 }
 
 function serveStatic(routePath, res) {
-  const urlPath = routePath === "/" ? "/index.html" : routePath === "/security-lab" ? "/security-lab.html" : routePath === "/evidence" ? "/evidence.html" : routePath;
+  const appRoutes = [
+    "/",
+    "/login",
+    "/dashboard",
+    "/agents",
+    "/delegations",
+    "/requests",
+    "/step-up",
+    "/risk",
+    "/security-lab",
+    "/audit",
+    "/merchant",
+    "/evidence",
+    "/developer",
+    "/demo"
+  ];
+  const isAppRoute = appRoutes.includes(routePath) ||
+    routePath.startsWith("/agents/") ||
+    routePath.startsWith("/delegations/") ||
+    routePath.startsWith("/requests/");
+  const urlPath = isAppRoute ? "/index.html" : routePath;
   const file = path.join(root, "frontend", path.normalize(urlPath));
   if (!file.startsWith(path.join(root, "frontend")) || !fs.existsSync(file)) return false;
   const type = file.endsWith(".css") ? "text/css" : file.endsWith(".js") ? "text/javascript" : "text/html";
-  res.writeHead(200, { "content-type": type, "x-content-type-options": "nosniff", "referrer-policy": "no-referrer" });
+  res.writeHead(200, {
+    "content-type": type,
+    "x-content-type-options": "nosniff",
+    "referrer-policy": "no-referrer",
+    "content-security-policy": "default-src 'self'; img-src 'self' https://images.unsplash.com data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'"
+  });
   res.end(fs.readFileSync(file));
   return true;
 }
@@ -573,6 +598,7 @@ export async function handleAgentAuthRequest(req, res) {
         },
         payment_config: paymentConfig(),
         agents: store.all("agents").map(({ public_key, ...a }) => a),
+        merchants: store.all("merchants"),
         delegations: store.all("delegations"),
         merchantOrders: store.all("merchantOrders"),
         requests: store.all("requests").slice(-20).reverse(),

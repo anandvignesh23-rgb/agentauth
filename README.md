@@ -88,6 +88,7 @@ Deployment docs:
 - `docs/deployment.md`
 - `docs/deployment-limitations.md`
 - `docs/deployment-status.md`
+- `docs/frontend.md`
 - `docs/vercel-migration-audit.md`
 - `docs/razorpay-integration-audit.md`
 - `docs/razorpay-setup.md`

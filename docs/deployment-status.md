@@ -3,6 +3,7 @@
 | Component | Status | Notes |
 | --- | --- | --- |
 | Public backend | LIVE | https://agentauth.vercel.app |
+| Public frontend | LIVE | https://agentauth.vercel.app |
 | HTTPS | LIVE | Vercel HTTPS is active at the production alias. |
 | Health endpoint | REAL | `GET /health` works locally and is configured as health check. |
 | API docs | REAL | `/docs` and `/openapi.json` are available. |
@@ -51,7 +52,7 @@ https://agentauth.vercel.app
 
 Immutable deployment URLs change on every redeploy. Use the production alias above for verification.
 
-Latest production commit: `73b1219` (`Persist authorization status updates`).
+Latest production commit: `b6c4f98` (`Fix Vercel frontend deep links`), including frontend console commit `8ffd827`.
 
 ## Verification Completed Locally
 

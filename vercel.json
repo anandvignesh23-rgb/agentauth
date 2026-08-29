@@ -20,63 +20,63 @@
     },
     {
       "source": "/login",
-      "destination": "/api/login"
+      "destination": "/api"
     },
     {
       "source": "/dashboard",
-      "destination": "/api/dashboard"
+      "destination": "/api"
     },
     {
       "source": "/agents",
-      "destination": "/api/agents"
+      "destination": "/api"
     },
     {
-      "source": "/agents/(.*)",
-      "destination": "/api/agents/$1"
+      "source": "/agents/:path*",
+      "destination": "/api"
     },
     {
       "source": "/delegations",
-      "destination": "/api/delegations"
+      "destination": "/api"
     },
     {
-      "source": "/delegations/(.*)",
-      "destination": "/api/delegations/$1"
+      "source": "/delegations/:path*",
+      "destination": "/api"
     },
     {
       "source": "/requests",
-      "destination": "/api/requests"
+      "destination": "/api"
     },
     {
-      "source": "/requests/(.*)",
-      "destination": "/api/requests/$1"
+      "source": "/requests/:path*",
+      "destination": "/api"
     },
     {
       "source": "/step-up",
-      "destination": "/api/step-up"
+      "destination": "/api"
     },
     {
       "source": "/risk",
-      "destination": "/api/risk"
+      "destination": "/api"
     },
     {
       "source": "/security-lab",
-      "destination": "/api/security-lab"
+      "destination": "/api"
     },
     {
       "source": "/audit",
-      "destination": "/api/audit"
+      "destination": "/api"
     },
     {
       "source": "/merchant",
-      "destination": "/api/merchant"
+      "destination": "/api"
     },
     {
       "source": "/developer",
-      "destination": "/api/developer"
+      "destination": "/api"
     },
     {
       "source": "/demo",
-      "destination": "/api/demo"
+      "destination": "/api"
     },
     {
       "source": "/health",
@@ -92,7 +92,7 @@
     },
     {
       "source": "/evidence",
-      "destination": "/api/evidence"
+      "destination": "/api"
     },
     {
       "source": "/v1/(.*)",

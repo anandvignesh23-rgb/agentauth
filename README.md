@@ -96,6 +96,7 @@ Deployment docs:
 - `docs/security-proof.md`
 - `docs/concurrency-proof.md`
 - `docs/payment-provider-status.md`
+- `docs/supabase-security-remediation.md`
 
 Public smoke test:
 

@@ -15,6 +15,7 @@ Migration:
 
 ```text
 migrations/202609040001_lock_down_supabase_rls.sql
+migrations/202609040002_revoke_public_schema_usage.sql
 ```
 
 The migration:
@@ -23,6 +24,7 @@ The migration:
 - Forces Row-Level Security on every AgentAuth table.
 - Revokes all table access from `anon` and `authenticated`.
 - Revokes public schema usage, sequence access, and function execution from `anon` and `authenticated`.
+- Revokes inherited `PUBLIC` schema usage so `anon` and `authenticated` do not retain schema usage indirectly.
 - Revokes default table, sequence, and function privileges from `anon` and `authenticated`.
 - Preserves backend-only access through the `agentauth_app` role when present.
 
@@ -45,8 +47,10 @@ Supabase catalog verification returned:
 {
   "rls_enabled_and_forced_tables": 20,
   "expected_tables": 20,
-  "anon_authenticated_table_grants": [],
-  "rls_failures": []
+  "anon_authenticated_table_grant_count": 0,
+  "anon_schema_usage": false,
+  "authenticated_schema_usage": false,
+  "anon_authenticated_policy_count": 0
 }
 ```
 
